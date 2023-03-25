@@ -10,7 +10,7 @@ with st.expander("Procedure"):
     st.subheader
 with st.expander("Simulation"):
     st.subheader
-with st.expander("Results"):
+with st.expander("Quize"):
     st.subheader
 with st.expander("References"):
     st.subheader
