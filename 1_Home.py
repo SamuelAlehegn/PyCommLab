@@ -14,6 +14,9 @@ def main():
     st.write("Our trainer includes a variety of features to help you learn, including interactive coding exercises, video tutorials, and quizzes. Additionally, our trainer is designed to be user-friendly and accessible, with clear instructions and helpful tips throughout.")
     st.write("Whether you're a student, researcher, or industry professional, our Python-based digital communication system trainer is the perfect tool to help you learn and master the fundamentals of digital communication systems. Start your learning journey today and discover the power of Python for digital communication systems!")
 
+    st.info("Complete Digital Communication Systems Block Diagram")
+    st.image("file\img\Screenshot from 2023-01-03 23-03-13.png")
+
 
 if __name__ == "__main__":
     main()
