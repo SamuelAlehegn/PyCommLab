@@ -15,24 +15,57 @@ with st.expander("Procedure"):
 with st.container():
     st.write("Simulations")
     # st.subheader
-    st.expander("Classification of Digital Image")
-    input_image = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'])
-    digital_Image = st.selectbox(
-        "Digital Image", ("Binary Image", "Grayscale Image", "Color Image"))
-    if input_image is not None:
-        if digital_Image == "Binary Image":
+    with st.expander("Classification of Digital Image"):
 
-            # Load the image in grayscale
-            img = cv2.imread('image.jpg', 0)
+        st.write("Image to Binary Image Converter")
+        # Upload image
+        uploaded_file = st.file_uploader(
+            "Choose an image file", type=["jpg", "jpeg", "png"])
+        if uploaded_file is not None:
+            # Read image
+            image = cv2.imdecode(np.fromstring(
+                uploaded_file.read(), np.uint8), 1)
 
-            # Convert the image to binary
-            ret, binary_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+            image_type = st.selectbox(
+                "Select Image", ("Binary Image", "Grayscale Image", "Color Image"))
+            if image_type == "Binary Image":
 
-            # Display the original and binary images
-            cv2.imshow('Original Image', img)
-            cv2.imshow('Binary Image', binary_img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+                # Convert to grayscale
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+                # Convert to binary image using thresholding
+                _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+
+                column_one, column_two = st.columns(2)
+                with column_one:
+                    # Display original and binary images
+                    st.image(image, caption="Original Image",
+                             use_column_width=True)
+                with column_two:
+                    st.image(binary, caption="Binary Image",
+                             use_column_width=True)
+
+            elif image_type == "Grayscale Image":
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                column_one, column_two = st.columns(2)
+                with column_one:
+                    st.image(image, caption="Original Image",
+                             use_column_width=True)
+                with column_two:
+                    st.image(gray, caption="Grayscale Image",
+                             use_column_width=True)
+            # else:
+            #     column_one, column_two = st.columns(2)
+            #     # Convert to color image using OpenCV
+            #     color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+            #     # color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+            #     column_one, column_two = st.columns(2)
+            #     with column_one:
+            #         st.image(image, caption="Original Image",
+            #                  use_column_width=True)
+            #     with column_two:
+            #         st.image(color, caption="Color Image",
+            #                  use_column_width=True)
 
 
 with st.expander("Quize"):
