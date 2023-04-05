@@ -54,18 +54,19 @@ with st.container():
                 with column_two:
                     st.image(gray, caption="Grayscale Image",
                              use_column_width=True)
-            # else:
-            #     column_one, column_two = st.columns(2)
-            #     # Convert to color image using OpenCV
-            #     color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            #     # color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            #     column_one, column_two = st.columns(2)
-            #     with column_one:
-            #         st.image(image, caption="Original Image",
-            #                  use_column_width=True)
-            #     with column_two:
-            #         st.image(color, caption="Color Image",
-            #                  use_column_width=True)
+            else:
+
+                color = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                column_one, column_two = st.columns(2)
+
+                # color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                with column_one:
+                    st.image(image, caption="Original Image",
+                             use_column_width=True)
+                with column_two:
+                    st.image(image, caption="Color Image",
+                             use_column_width=True)
+            
 
 
 with st.expander("Quize"):
