@@ -6,15 +6,22 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Non Deterministic Source",  layout="wide",
                    initial_sidebar_state="auto")
 
-with st.expander("Introduction"):
-    st.write("The non deterministic source")
-with st.expander("Theory"):
-    st.subheader
-with st.expander("Procedure"):
-    st.subheader
+with st.container():
+    st.subheader("Introduction")
+    with st.expander("Introduction"):
+        st.write("Introduction")
+with st.container():
+    st.subheader("Theory")
+    with st.expander("Theory"):
+        st.write("Theory")
+with st.container():
+    st.subheader("Procedure")
+    with st.expander("Procedure"):
+        st.write("Procedure")
 
 with st.container():
-    st.write("Simulations")
+    st.subheader("Simulation")
+
     st.write("1. Analog to Digital Conversion")
 
     # column_one, column_two = st.columns(2)
@@ -172,9 +179,29 @@ with st.container():
     # with column_two:
     #     with st.expander("DELTA MODULATION"):
     #         st.subheader
+    st.write("2. Convolution")
+    with st.expander("Convolution"):
+        st.subheader("Convolution")
+        convolution_type = st.selectbox(
+            "Convolution Type", ("Discrete Time", "Continuous Time"))
+        if convolution_type == "Discrete Time":
+            st.write("Discrete Time Convolution")
+        else:
+            st.write("Continuous Time Convolution")
+
+    st.write("3. Modulation")
+    with st.expander("Modulation"):
+        st.write("Modulation")
+    st.write("4. Filter")
+    with st.expander("Filter"):
+        st.write("Filter")
 
 
-with st.expander("Quize"):
-    st.subheader
-with st.expander("References"):
-    st.subheader
+with st.container():
+    st.subheader("Quize")
+    with st.expander("Quize"):
+        st.write("Quize")
+with st.container():
+    st.subheader("References")
+    with st.expander("References"):
+        st.write("References")
