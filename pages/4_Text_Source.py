@@ -1,5 +1,6 @@
 import heapq
 import streamlit as st
+import sys
 
 st.set_page_config(page_title="Text Source",  layout="wide",
                    initial_sidebar_state="auto")
@@ -43,7 +44,7 @@ with st.container():
                     # the tree direction (0 or 1)
                     self.code = ''
 
-            """ A supporting function in order to calculate the probabilities of symbols in specified data """
+            # """ A supporting function in order to calculate the probabilities of symbols in specified data """
             def CalculateProbability(the_data):
                 the_symbols = dict()
                 for item in the_data:
@@ -53,7 +54,7 @@ with st.container():
                         the_symbols[item] += 1
                 return the_symbols
 
-            """ A supporting function in order to print the codes of symbols by travelling a Huffman Tree """
+            # """ A supporting function in order to print the codes of symbols by travelling a Huffman Tree """
             the_codes = dict()
 
             def CalculateCodes(node, value=''):
@@ -70,7 +71,7 @@ with st.container():
 
                 return the_codes
 
-            """ A supporting function in order to get the encoded result """
+            # """ A supporting function in order to get the encoded result """
             def OutputEncoded(the_data, coding):
                 encodingOutput = []
                 for element in the_data:
@@ -80,7 +81,7 @@ with st.container():
                 the_string = ''.join([str(item) for item in encodingOutput])
                 return the_string
 
-            """ A supporting function in order to calculate the space difference between compressed and non compressed data"""
+            # """ A supporting function in order to calculate the space difference between compressed and non compressed data"""
             def TotalGain(the_data, coding):
                 # total bit space to store the data before compression
                 beforeCompression = len(the_data) * 8
@@ -129,7 +130,7 @@ with st.container():
                     the_nodes.append(newNode)
 
                 huffmanEncoding = CalculateCodes(the_nodes[0])
-                print("symbols with codes", huffmanEncoding)
+                # print("symbols with codes", huffmanEncoding)
                 TotalGain(the_data, huffmanEncoding)
                 encodedOutput = OutputEncoded(the_data, huffmanEncoding)
                 return encodedOutput, the_nodes[0], the_symbols, the_probabilities, symbolWithProbs, huffmanEncoding
@@ -153,6 +154,10 @@ with st.container():
             #     return string
 
             # the_data = st.text_input('Enter text')
+            if user_input is None:
+                st.write("Please enter the text")
+                user_input = "none"
+
             encoding, the_tree, the_symbols, the_probabilities, symbolWithProbs, huffmanEncoding = HuffmanEncoding(
                 user_input)
             encoded_output = encoding
@@ -163,7 +168,7 @@ with st.container():
             st.write("Input Text: ", user_input)
             st.write("Symbols: ", the_symbols)
             st.write("probabilities: ", the_probabilities)
-            st.write("symbolWithProbs ", symbolWithProbs)
+            st.write("symbol With Probabilities ", symbolWithProbs)
             st.write("Symbols with code", huffmanEncoding)
             st.write("Encoded data:", encoded_output)
             st.write("Space usage before compression (in bits):",
@@ -173,6 +178,75 @@ with st.container():
 
         elif encoding_scheme == "Arithmetic Coding":
             st.write("Arithmetic Coding")
+
+            def arithmetic_encode(text):
+                # Get size of input string
+                input_size = sys.getsizeof(text)
+
+                freq = {}
+                for char in text:
+                    if char in freq:
+                        freq[char] += 1
+                    else:
+                        freq[char] = 1
+
+                # Calculate probabilities
+                total = len(text)
+                prob = {}
+                start = 0
+                for char, f in freq.items():
+                    prob[char] = (start, start + f/total)
+                    start += f/total
+
+                # Encode the text
+                low, high = 0, 1
+                for char in text:
+                    r_low, r_high = prob[char]
+                    range_size = high - low
+                    high = low + range_size * r_high
+                    low = low + range_size * r_low
+
+                # Get size of encoded text
+                encoded_text = (low + high) / 2
+                encoded_size = sys.getsizeof(encoded_text)
+
+                return (low + high) / 2, prob, input_size, encoded_size
+
+            # def arithmetic_decode(encoded_text, text_length, prob):
+            #     # Initialize variables
+            #     decoded_text = ""
+            #     low, high = 0, 1
+
+            #     # Decode the text
+            #     for i in range(text_length):
+            #         for char, (r_low, r_high) in prob.items():
+            #             range_size = high - low
+            #             if r_low <= (encoded_text - low) / range_size < r_high:
+            #                 decoded_text += char
+            #                 high = low + range_size * r_high
+            #                 low = low + range_size * r_low
+            #                 break
+
+            #     return decoded_text
+            # text = user_input
+            # encoded_text, prob, input_size, encoded_size = arithmetic_encode(text)
+            # decoded_text = arithmetic_decode(encoded_text, len(text), prob)
+            # print("Original text:", text)
+            # print("Encoded text:", encoded_text)
+            # print("Decoded text:", decoded_text)
+            # print("Input size:", input_size)
+            # print("Encoded size:", encoded_size)
+
+            encoded_text, prob, input_size, encoded_size = arithmetic_encode(
+                user_input)
+            st.write("Input Text: ", user_input)
+            st.write("Symbol Probabilities: ", prob)
+            st.write("Encoded data:", encoded_text)
+            st.write("Space usage before compression (in bits):",
+                     input_size)
+            st.write("Space usage after compression (in bits):",
+                     encoded_size)
+
         elif encoding_scheme == "Shannon-Fano":
             st.write("Shannon-Fano")
         elif encoding_scheme == "Run-Length Encoding":
