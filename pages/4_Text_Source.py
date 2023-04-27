@@ -1,6 +1,12 @@
-import heapq
+# Core packages
 import streamlit as st
 import sys
+
+import heapq
+import numpy as np
+import matplotlib.pyplot as plt
+from sk_dsp_comm.fec_conv import FECConv
+
 
 st.set_page_config(page_title="Text Source",  layout="wide",
                    initial_sidebar_state="auto")
@@ -254,6 +260,79 @@ with st.container():
 
     with st.expander("Cahnnel Coding"):
         st.write("Channel Coding")
+        cahnnel_encoding_scheme = st.selectbox("Select the Cahnnel Coding scheme", [
+                                               "Convolutional Coding", "Turbo Coding", "Block Coding"])
+        if cahnnel_encoding_scheme == "Convolutional Coding":
+            st.write("Convolutional Coding")
+
+            # Define the convolutional code parameters
+            k = 2   # Number of input bits
+            n = 3   # Number of output bits
+            g1 = np.array([1, 0, 1])   # Generator polynomial for output bit 1
+            g2 = np.array([1, 1, 1])   # Generator polynomial for output bit 2
+
+            # upper row operates on the outputs for the G1 polynomial and the lower row operates on the outputs of the G2 polynomial.
+            cc = FECConv(('101', '111'))
+
+            # Accept input from source coding output
+            msg = str(encoded_output)
+            msg = np.array([int(i) for i in msg])
+            state = '00'
+            # Convolutionally encode the message sequence
+            encoded_msg, state = cc.conv_encoder(msg, state)
+
+            # Calculate the Hamming distance between the original and encoded message sequences
+            # dist = hamming_dist(msg, encoded_msg)
+
+            # Print the results
+            convolutional_coded_msg = encoded_msg
+            st.write("Original message:", str(msg))
+            st.write("Encoded message:", str(encoded_msg))
+            # print("Hamming distance:", dist)
+
+            # Plot the original and encoded message sequences
+            plt.subplot(2, 1, 1)
+            plt.stem(msg)
+            plt.title("Original Message")
+            plt.subplot(2, 1, 2)
+            plt.stem(encoded_msg)
+            plt.title("Encoded Message")
+            st.pyplot()
+
+        #     # Define the convolutional code parameters
+        #     K = 3  # Number of input bits to each encoder
+        #     N = 2  # Number of output bits from each encoder
+        #     rate = K/N  # Code rate
+
+        #     # Accept input data from the user
+        #     source_coding = encoded_output
+        #     data_str = str(source_coding)
+        #     data = np.array([int(d) for d in data_str])
+
+        #     # Encode the data using the convolutional code
+        #     encoded_data = conv_encode.conv_encode(data, K, N)
+        #     st.write("convolutional code: ", encoded_data)
+
+        #     # # Modulate the encoded data using BPSK modulation
+        #     # modulated_data = modnorm.bpsk_mod(encoded_data)
+
+        #     # # Add noise to the modulated data
+        #     # noise_power = 0.1  # Noise power
+        #     # noisy_data = modulated_data + \
+        #     #     np.sqrt(noise_power)*np.random.randn(len(modulated_data))
+
+        #     # # Decode the noisy data using the Viterbi algorithm
+        #     # decoded_data = viterbi.viterbi_decode(noisy_data, K, N)
+
+        #     # # Calculate the bit error rate (BER)
+        #     # ber = np.sum(np.abs(decoded_data - data))/len(data)
+        #     # print('Bit Error Rate: {:.2e}'.format(ber))
+
+        # elif cahnnel_encoding_scheme == "Turbo Coding":
+        #     st.write("Turbo Coding")
+        # elif cahnnel_encoding_scheme == "Block Coding":
+        #     st.write("Block Coding")
+
     with st.expander("Modulation"):
         st.write("Modulation")
     with st.expander("Channel"):
