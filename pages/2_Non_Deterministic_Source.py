@@ -155,131 +155,108 @@ with st.container():
         modulation_Type = st.selectbox(
             "Modulation Type", ("Amplitude modulation", "Angle modulation"))
         if modulation_Type == "Amplitude modulation":
-            st.write("Amplitude Modulation")
-            amplitude_modulation_type = st.selectbox("Select Amplitude Modulation Type", (
-                "Double Sideband Suppressed Carrier(DSB SC)", "Double side-band full carrier", "Single sideband (SSB)", "Vestigial sideband modulation"))
-            if amplitude_modulation_type == "Double Sideband Suppressed Carrier(DSB SC)":
-                st.write("Double Sideband Suppressed Carrier(DSB SC)")
 
-                # Define the carrier signal
-                def carrier_signal(freq, duration, sampling_rate):
-                    t = np.linspace(0, duration, sampling_rate *
-                                    duration, endpoint=False)
-                    return np.sin(2 * np.pi * freq * t)
+            def generate_signal(fc, fm):
+                t = np.linspace(0, 1, 1000)
+                m = np.sin(2*np.pi*fm*t)
+                return t, m
 
-                # Define the message signal
-                def message_signal(freq, duration, sampling_rate):
-                    t = np.linspace(0, duration, sampling_rate *
-                                    duration, endpoint=False)
-                    return np.sin(2 * np.pi * freq * t)
+            def dsb_fc_modulation(t, m, fc):
+                dsb_fc = m * np.cos(2*np.pi*fc*t)
+                return dsb_fc
 
-                # Define DSB-SC modulation function
-                def dsb_sc_modulation(message, carrier):
-                    return message * carrier
+            def ssb_sc_modulation(t, m, fc):
+                ssb_sc = signal.hilbert(m)
+                ssb_sc_upper = np.real(ssb_sc * np.exp(1j*2*np.pi*fc*t))
+                ssb_sc_lower = np.imag(ssb_sc * np.exp(1j*2*np.pi*fc*t))
+                return ssb_sc_upper, ssb_sc_lower
 
-                # Streamlit interface
-                st.title('Double Sideband Suppressed Carrier Modulation')
+            def ssb_fc_modulation(t, m, fc):
+                ssb_fc = signal.hilbert(m)
+                ssb_fc_upper = np.real(ssb_fc * np.exp(1j*2*np.pi*fc*t))
+                ssb_fc_lower = -np.imag(ssb_fc * np.exp(1j*2*np.pi*fc*t))
+                return ssb_fc_upper, ssb_fc_lower
 
-                # Get user inputs
-                message_freq = st.number_input(
-                    'Message signal frequency', value=10)
-                carrier_freq = st.number_input(
-                    'Carrier signal frequency', value=100)
-                duration = st.number_input(
-                    'Signal duration (seconds)', value=1)
-                sampling_rate = st.number_input(
-                    'Sampling rate (samples per second)', value=44100)
+            def vsb_modulation(t, m, fc):
+                vsb = signal.firwin(101, 0.25)
+                v = np.convolve(m, vsb, mode='same')
+                vsb_upper = v * np.cos(2*np.pi*fc*t)
+                vsb_lower = signal.hilbert(v) * np.sin(2*np.pi*fc*t)
+                return vsb_upper, vsb_lower
 
-                # Generate the signals
-                message = message_signal(message_freq, duration, sampling_rate)
-                carrier = carrier_signal(carrier_freq, duration, sampling_rate)
-                modulated_signal = dsb_sc_modulation(message, carrier)
+            def plot_graphs(t, signal, spectrum, title):
+                fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+                fig.suptitle(title)
+                axs[0].plot(t, signal)
+                axs[0].set_title('Time-domain')
+                axs[1].plot(spectrum[0], np.abs(spectrum[1]))
+                axs[1].set_title('Frequency-domain')
+                plt.tight_layout()
+                return fig
 
-                time_column, frequency_column = st.columns(2)
+            # # Define the carrier frequency and the message signal
+            # fc = 1000  # carrier frequency
+            # fm = 100  # message signal frequency
+            # Accept user input for carrier and message signal frequencies
+            fc = st.slider(
+                'Carrier Frequency (Hz)', 100, 10000, 1000, 100)
+            fm = st.slider('Message Frequency (Hz)', 10, 1000, 100, 10)
 
-                with time_column:
-                    # Time domain plots
-                    fig1, axs1 = plt.subplots(3, 1, figsize=(10, 8))
-                    axs1[0].plot(message)
-                    axs1[0].set_title('Message signal')
-                    axs1[1].plot(carrier)
-                    axs1[1].set_title('Carrier signal')
-                    axs1[2].plot(modulated_signal)
-                    axs1[2].set_title('Modulated signal')
-                    plt.tight_layout()
-                    st.pyplot(fig1)
-                with frequency_column:
-                    # Frequency domain plots
-                    fig2, axs2 = plt.subplots(3, 1, figsize=(10, 8))
-                    f = np.fft.fftshift(np.fft.fftfreq(
-                        len(message), 1/sampling_rate))
+            # Generate the message signal
+            t, m = generate_signal(fc, fm)
 
-                    axs2[0].magnitude_spectrum(message, Fs=sampling_rate)
-                    axs2[0].set_title('Message signal frequency spectrum')
-                    axs2[1].magnitude_spectrum(carrier, Fs=sampling_rate)
-                    axs2[1].set_title('Carrier signal frequency spectrum')
-                    axs2[2].magnitude_spectrum(
-                        modulated_signal, Fs=sampling_rate)
-                    axs2[2].set_title('Modulated signal frequency spectrum')
-                    plt.tight_layout()
-                    st.pyplot(fig2)
+            # Show the message signal
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.plot(t, m)
+            ax.set_title('Message Signal')
+            plt.tight_layout()
+            st.pyplot(fig)
 
-            elif amplitude_modulation_type == "Double side-band full carrier":
-                st.write("Double side-band full carrier")
-                # Define the DSB-FC signal generation function
+            amplitude_modulation_type = st.selectbox(
+                "Select Amplitude Modulation", ("Double-sideband a full-carrier", "Single-sideband suppressed-carrier", "Single-sideband full-carrier", "Vestigial sideband modulation"))
+            if amplitude_modulation_type == "Double-sideband a full-carrier":
+                # Double-sideband full carrier modulation
+                dsb_fc = dsb_fc_modulation(t, m, fc)
+                dsb_fc_spectrum = np.fft.fft(dsb_fc)
+                dsb_fc_fig = plot_graphs(t, dsb_fc, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), dsb_fc_spectrum), 'DSB-FC')
+                st.pyplot(dsb_fc_fig)
 
-                def dsbfc_signal(fc, fm, m, duration, fs):
-                    t = np.arange(0, duration, 1/fs)
-                    carrier = np.cos(2*np.pi*fc*t)
-                    message = np.cos(2*np.pi*fm*t)
-                    dsbfc = (1 + m*message)*carrier
-                    return t, dsbfc
+            elif amplitude_modulation_type == "Single-sideband suppressed-carrier":
+                # Single-sideband suppressed carrier modulation
+                ssb_sc_upper, ssb_sc_lower = ssb_sc_modulation(t, m, fc)
+                ssb_sc_upper_spectrum = np.fft.fft(ssb_sc_upper)
+                ssb_sc_lower_spectrum = np.fft.fft(ssb_sc_lower)
+                ssb_sc_fig = plot_graphs(t, ssb_sc_upper, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), ssb_sc_upper_spectrum), 'SSB-SC (Upper Sideband)')
+                ssb_sc_fig2 = plot_graphs(t, ssb_sc_lower, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), ssb_sc_lower_spectrum), 'SSB-SC (Lower Sideband)')
+                st.pyplot(ssb_sc_fig)
+                st.pyplot(ssb_sc_fig2)
 
-                # Create Streamlit app
-                st.title("DSB-FC Signal Generator")
+            elif amplitude_modulation_type == "Single-sideband full-carrier":
+                # Single-sideband full carrier modulation
+                ssb_fc_upper, ssb_fc_lower = ssb_fc_modulation(t, m, fc)
+                ssb_fc_upper_spectrum = np.fft.fft(ssb_fc_upper)
+                ssb_fc_lower_spectrum = np.fft.fft(ssb_fc_lower)
+                ssb_fc_fig = plot_graphs(t, ssb_fc_upper, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), ssb_fc_upper_spectrum), 'SSB-FC (Upper Sideband)')
+                ssb_fc_fig2 = plot_graphs(t, ssb_fc_lower, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), ssb_fc_lower_spectrum), 'SSB-FC (Lower Sideband)')
+                st.pyplot(ssb_fc_fig)
+                st.pyplot(ssb_fc_fig2)
 
-                # User input for carrier frequency
-                fc = st.number_input(
-                    "Enter carrier frequency (Hz):", value=1000, step=100)
-
-                # User input for message signal frequency
-                fm = st.number_input(
-                    "Enter message signal frequency (Hz):", value=100, step=10)
-
-                # User input for modulation index
-                m = st.number_input(
-                    "Enter modulation index:", value=0.5, step=0.1)
-
-                duration = st.number_input(
-                    "Enter duration of signal (seconds):", value=1)
-
-                fs = st.number_input(
-                    "Enter sampling frequency (Hz):", value=10000, step=1000)
-
-                t, dsbfc = dsbfc_signal(fc, fm, m, duration, fs)
-
-                # Plot the time-domain signal
-                fig1, ax1 = plt.subplots()
-                ax1.plot(t, dsbfc)
-                ax1.set_xlabel("Time (s)")
-                ax1.set_ylabel("Amplitude")
-                ax1.set_title("DSB-FC Signal (Time Domain)")
-                st.pyplot(fig1)
-
-                # Plot the frequency-domain signal
-                fig2, ax2 = plt.subplots()
-                f = np.fft.fftfreq(len(dsbfc), 1/fs)
-                Y = np.fft.fft(dsbfc)
-                ax2.plot(f, np.abs(Y))
-                ax2.set_xlabel("Frequency (Hz)")
-                ax2.set_ylabel("Magnitude")
-                ax2.set_title("DSB-FC Signal (Frequency Domain)")
-                st.pyplot(fig2)
-
-            elif amplitude_modulation_type == "Single sideband (SSB)":
-                st.write("Single sideband (SSB)")
             elif amplitude_modulation_type == "Vestigial sideband modulation":
-                st.write("Vestigial sideband modulation")
+                # Vestigial sideband modulation
+                vsb_upper, vsb_lower = vsb_modulation(t, m, fc)
+                vsb_upper_spectrum = np.fft.fft(vsb_upper)
+                vsb_lower_spectrum = np.fft.fft(vsb_lower)
+                vsb_fig = plot_graphs(t, vsb_upper, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), vsb_upper_spectrum), 'VSB (Upper Sideband)')
+                vsb_fig2 = plot_graphs(t, vsb_lower, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), vsb_lower_spectrum), 'VSB (Lower Sideband)')
+                st.pyplot(vsb_fig)
+                st.pyplot(vsb_fig2)
 
         elif modulation_Type == "Angle modulation":
             st.write("Angle modulation")
