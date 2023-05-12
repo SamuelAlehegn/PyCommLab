@@ -10,6 +10,8 @@ import cv2
 
 st.set_page_config(page_title="Image Source",  layout="wide",
                    initial_sidebar_state="auto")
+st.set_option('deprecation.showPyplotGlobalUse', False)
+
 
 
 # ********************************************************

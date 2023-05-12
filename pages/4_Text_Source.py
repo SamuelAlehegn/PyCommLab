@@ -10,6 +10,7 @@ from sk_dsp_comm.fec_conv import FECConv
 
 st.set_page_config(page_title="Text Source",  layout="wide",
                    initial_sidebar_state="auto")
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
 
 with st.container():
@@ -332,6 +333,9 @@ with st.container():
         #     st.write("Turbo Coding")
         # elif cahnnel_encoding_scheme == "Block Coding":
         #     st.write("Block Coding")
+
+        elif cahnnel_encoding_scheme == "Turbo Coding":
+            st.write("Turbo Coding")
 
     with st.expander("Modulation"):
         st.write("Modulation")
