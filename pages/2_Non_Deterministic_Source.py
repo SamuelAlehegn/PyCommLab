@@ -1,11 +1,12 @@
 import streamlit as st
-
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.signal as signal
 
 
 st.set_page_config(page_title="Non Deterministic Source",  layout="wide",
-                   initial_sidebar_state="auto")
+                   initial_sidebar_state="auto", )
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
 with st.container():
     st.subheader("Introduction")
@@ -24,9 +25,6 @@ with st.container():
     st.subheader("Simulation")
 
     st.write("1. Analog to Digital Conversion")
-
-    # column_one, column_two = st.columns(2)
-    # with column_one:
     with st.expander("PULSE CODE MODULATION"):
         # INPUT
         signal_Type = st.selectbox("Signal Type", ("Sine", "Cosine"))
@@ -84,51 +82,14 @@ with st.container():
             else:
 
                 n = np.arange(0, 2*np.pi, 1/sampling_frequency)
-                plt.stem(n, x[::int(1/sampling_frequency)])
+                sampled_signal = amplitude * \
+                    np.cos(2*np.pi*frequency*n*sampling_period + theta)
+                # plt.stem(n, x[::int(1/sampling_frequency)])
                 plt.xlabel("Time")
                 plt.ylabel("Amplitude")
                 plt.title("Sampled Signal")
                 plt.grid()
                 st.pyplot()
-
-            # Set the sampling frequency and duration
-            # fs = 44100  # Hz
-            # duration = 5  # seconds
-
-            # # Generate a sine wave signal with a frequency of 440 Hz
-            # freq = 440  # Hz
-            # t = np.linspace(0, duration, int(fs * duration), endpoint=False)
-            # signal = np.sin(2 * np.pi * freq * t)
-
-            # # Plot the signal
-            # plt.plot(t, signal)
-            # plt.title('Sampled Signal')
-            # plt.xlabel('Time (s)')
-            # plt.ylabel('Amplitude')
-            # plt.show()
-# Quantization
-
-            # Set the sampling frequency and duration
-            # sampling_frequency = 44100  # Hz
-            # duration = 5  # seconds
-
-            # # Generate a sine wave signal with a frequency of 440 Hz
-            # # freq = 440  # Hz
-            # t = np.linspace(0, duration, int(
-            #     sampling_frequency * duration), endpoint=False)
-            # signal = np.sin(2 * np.pi * frequency * t)
-
-            # # Quantize the signal using PCM with 8 bits
-            # n_bits = 8
-            # quantized_signal = np.round(signal * (2**(n_bits-1)-1))
-
-            # # Plot the quantized signal
-            # plt.plot(t, quantized_signal)
-            # plt.title('Quantized Signal')
-            # plt.xlabel('Time (s)')
-            # plt.ylabel('Amplitude')
-            # # plt.pyplot()
-            # st.pyplot()
 
             st.write("II. Quantization")
             st.write("Bit Rate: ", bit_rate)
@@ -166,10 +127,6 @@ with st.container():
             print(encoded_signal)
             st.write("Encoded Signal: ", encoded_signal)
 
-            # st.write("Encoding Bit Rate: ", bit_rate)
-            # st.write("Encoding Bit Depth: ", bit_depth)
-            # encoded_signal = np.binary_repr(quantized_signal, width=bit_depth)
-            # st.write("Encoded Signal: ", encoded_signal)
             plt.stem(n*sampling_period, encoded_signal)
             plt.xlabel("Time")
             plt.ylabel("Amplitude")
@@ -180,6 +137,7 @@ with st.container():
     # with column_two:
     #     with st.expander("DELTA MODULATION"):
     #         st.subheader
+
     st.write("2. Convolution")
     with st.expander("Convolution"):
         st.subheader("Convolution")
@@ -268,6 +226,56 @@ with st.container():
 
             elif amplitude_modulation_type == "Double side-band full carrier":
                 st.write("Double side-band full carrier")
+                # Define the DSB-FC signal generation function
+
+                def dsbfc_signal(fc, fm, m, duration, fs):
+                    t = np.arange(0, duration, 1/fs)
+                    carrier = np.cos(2*np.pi*fc*t)
+                    message = np.cos(2*np.pi*fm*t)
+                    dsbfc = (1 + m*message)*carrier
+                    return t, dsbfc
+
+                # Create Streamlit app
+                st.title("DSB-FC Signal Generator")
+
+                # User input for carrier frequency
+                fc = st.number_input(
+                    "Enter carrier frequency (Hz):", value=1000, step=100)
+
+                # User input for message signal frequency
+                fm = st.number_input(
+                    "Enter message signal frequency (Hz):", value=100, step=10)
+
+                # User input for modulation index
+                m = st.number_input(
+                    "Enter modulation index:", value=0.5, step=0.1)
+
+                duration = st.number_input(
+                    "Enter duration of signal (seconds):", value=1)
+
+                fs = st.number_input(
+                    "Enter sampling frequency (Hz):", value=10000, step=1000)
+
+                t, dsbfc = dsbfc_signal(fc, fm, m, duration, fs)
+
+                # Plot the time-domain signal
+                fig1, ax1 = plt.subplots()
+                ax1.plot(t, dsbfc)
+                ax1.set_xlabel("Time (s)")
+                ax1.set_ylabel("Amplitude")
+                ax1.set_title("DSB-FC Signal (Time Domain)")
+                st.pyplot(fig1)
+
+                # Plot the frequency-domain signal
+                fig2, ax2 = plt.subplots()
+                f = np.fft.fftfreq(len(dsbfc), 1/fs)
+                Y = np.fft.fft(dsbfc)
+                ax2.plot(f, np.abs(Y))
+                ax2.set_xlabel("Frequency (Hz)")
+                ax2.set_ylabel("Magnitude")
+                ax2.set_title("DSB-FC Signal (Frequency Domain)")
+                st.pyplot(fig2)
+
             elif amplitude_modulation_type == "Single sideband (SSB)":
                 st.write("Single sideband (SSB)")
             elif amplitude_modulation_type == "Vestigial sideband modulation":
@@ -287,6 +295,88 @@ st.write("4. Filter")
 with st.expander("Filter"):
     st.write("Filter")
 
+    def plot_graphs(x, y, xlabel, ylabel, title):
+        fig, axs = plt.subplots(2, 1, figsize=(10, 6))
+        axs[0].plot(x, y, 'b-')
+        axs[0].set_xlabel(xlabel)
+        axs[0].set_ylabel(ylabel)
+        axs[0].set_title(title)
+
+        Y = np.fft.fft(y)
+        freq = np.fft.fftfreq(len(y), d=1 / 1000)
+        axs[1].plot(freq, np.abs(Y), 'r')
+        axs[1].set_xlabel('Frequency (Hz)')
+        axs[1].set_ylabel('Magnitude')
+        axs[1].set_xlim([0, 500])
+        axs[1].set_ylim([0, 1.2 * np.max(np.abs(Y))])
+        axs[1].set_title('Frequency Domain')
+
+        st.pyplot(fig)
+
+    def lowpass_filter(cutoff_freq, x, y):
+        b, a = signal.butter(5, cutoff_freq, 'low', fs=1000)
+        filtered = signal.filtfilt(b, a, y)
+        plot_graphs(x, y, 'Time (ms)', 'Amplitude', 'Low Pass Filter')
+        plot_graphs(x, filtered, 'Time (ms)', 'Amplitude',
+                    'Low Pass Filter (Filtered)')
+
+    def highpass_filter(cutoff_freq, x, y):
+        b, a = signal.butter(5, cutoff_freq, 'high', fs=1000)
+        filtered = signal.filtfilt(b, a, y)
+        plot_graphs(x, y, 'Time (ms)', 'Amplitude', 'High Pass Filter')
+        plot_graphs(x, filtered, 'Time (ms)', 'Amplitude',
+                    'High Pass Filter (Filtered)')
+
+    def bandpass_filter(low_cutoff_freq, high_cutoff_freq, x, y):
+        b, a = signal.butter(
+            5, [low_cutoff_freq, high_cutoff_freq], 'band', fs=1000)
+        filtered = signal.filtfilt(b, a, y)
+        plot_graphs(x, y, 'Time (ms)', 'Amplitude', 'Band Pass Filter')
+        plot_graphs(x, filtered, 'Time (ms)', 'Amplitude',
+                    'Band Pass Filter (Filtered)')
+
+    def bandreject_filter(low_cutoff_freq, high_cutoff_freq, x, y):
+        b, a = signal.butter(
+            5, [low_cutoff_freq, high_cutoff_freq], 'bandstop', fs=1000)
+        filtered = signal.filtfilt(b, a, y)
+        plot_graphs(x, y, 'Time (ms)', 'Amplitude', 'Band Reject Filter')
+        plot_graphs(x, filtered, 'Time (ms)', 'Amplitude',
+                    'Band Reject Filter (Filtered)')
+
+    st.subheader('Filter Implementation in Python and Streamlit')
+
+    filter_type = st.selectbox('Select a filter:', ('Low Pass Filter',
+                                                    'High Pass Filter', 'Band Pass Filter', 'Band Reject Filter'))
+
+    if filter_type == 'Low Pass Filter':
+        cutoff_freq = st.slider('Cutoff Frequency (Hz)', 0, 500, 50)
+        x = np.linspace(0, 1, 1000, endpoint=False)
+        y = np.sin(2 * np.pi * 5 * x) + np.sin(2 * np.pi * 100 * x)
+        lowpass_filter(cutoff_freq, x, y)
+
+    elif filter_type == 'High Pass Filter':
+        cutoff_freq = st.slider('Cutoff Frequency (Hz)', 0, 500, 50)
+        x = np.linspace(0, 1, 1000, endpoint=False)
+        y = np.sin(2 * np.pi * 5 * x) + np.sin(2 * np.pi * 100 * x)
+        highpass_filter(cutoff_freq, x, y)
+
+    elif filter_type == 'Band Pass Filter':
+        low_cutoff_freq = st.slider(
+            'Low Cutoff Frequency (Hz)', 0, 500, 50)
+        high_cutoff_freq = st.slider(
+            'High Cutoff Frequency (Hz)', low_cutoff_freq, 500, 100)
+        x = np.linspace(0, 1, 1000, endpoint=False)
+        y = np.sin(2 * np.pi * 5 * x) + np.sin(2 * np.pi * 100 * x)
+        bandpass_filter(low_cutoff_freq, high_cutoff_freq, x, y)
+
+    elif filter_type == 'Band Reject Filter':
+        low_cutoff_freq = st.slider(
+            'Low Cutoff Frequency (Hz)', 0, 500, 50)
+        high_cutoff_freq = st.slider(
+            'High Cutoff Frequency (Hz)', low_cutoff_freq, 500, 100)
+        x = np.linspace(0, 1, 1000, endpoint=False)
+        y = np.sin(2 * np.pi * 5 * x) + np.sin(2 * np.pi * 100 * x)
+        bandreject_filter(low_cutoff_freq, high_cutoff_freq, x, y)
 
 with st.container():
     st.subheader("Quize")
