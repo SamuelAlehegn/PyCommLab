@@ -260,12 +260,68 @@ with st.container():
 
         elif modulation_Type == "Angle modulation":
             st.write("Angle modulation")
+
+            def generate_signal(fm):
+                t = np.linspace(0, 1, 1000)
+                m = np.sin(2*np.pi*fm*t)
+                return t, m
+
+            def freq_modulation(t, m, fc, kf):
+                freq_mod = np.cos(2*np.pi*fc*t + 2*np.pi*kf*np.cumsum(m))
+                return freq_mod
+
+            def phase_modulation(t, m, fc, kp):
+                phase_mod = np.cos(2*np.pi*fc*t + kp*m)
+                return phase_mod
+
+            def plot_graphs(t, signal, spectrum, title):
+                fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+                fig.suptitle(title)
+                axs[0].plot(t, signal)
+                axs[0].set_title('Time-domain')
+                axs[1].plot(spectrum[0], np.abs(spectrum[1]))
+                axs[1].set_title('Frequency-domain')
+                plt.tight_layout()
+                return fig
+
+            # Accept user input for message signal frequency and modulation parameters
+            fm = st.slider('Message Frequency (Hz)', 10, 1000, 100, 10)
+            fc = st.slider(
+                'Carrier Frequency (Hz)', 100, 10000, 1000, 100)
+            kf = st.slider(
+                'Frequency Modulation Index', 0.1, 10.0, 2.0, 0.1)
+            kp = st.slider(
+                'Phase Modulation Index', 0.1, 10.0, 2.0, 0.1)
+
+            # Generate the message signal
+            t, m = generate_signal(fm)
+
+            # Show the message signal
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.plot(t, m)
+            ax.set_title('Message Signal')
+            plt.tight_layout()
+            st.pyplot(fig)
+
             angle_modulation_type = st.selectbox(
                 "Select Angle Modulation", ("Frequency Modulation", "Phase Modulation"))
             if angle_modulation_type == "Frequency Modulation":
                 st.write("Frequency Modulation")
+                # Implement frequency modulation
+                freq_mod = freq_modulation(t, m, fc, kf)
+                freq_mod_spectrum = np.fft.fft(freq_mod)
+                freq_mod_fig = plot_graphs(t, freq_mod, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), freq_mod_spectrum), 'Frequency Modulation')
+                st.pyplot(freq_mod_fig)
             elif angle_modulation_type == "Phase Modulation":
                 st.write("Phase Modulation")
+
+                # Implement phase modulation
+                phase_mod = phase_modulation(t, m, fc, kp)
+                phase_mod_spectrum = np.fft.fft(phase_mod)
+                phase_mod_fig = plot_graphs(t, phase_mod, (np.fft.fftfreq(
+                    t.shape[-1], 1/1000), phase_mod_spectrum), 'Phase Modulation')
+                st.pyplot(phase_mod_fig)
 
 
 st.write("4. Filter")
