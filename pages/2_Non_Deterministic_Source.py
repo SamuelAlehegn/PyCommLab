@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as signal
+from scipy.signal import convolve
 
 
 st.set_page_config(page_title="Non Deterministic Source",  layout="wide",
@@ -141,12 +142,114 @@ with st.container():
     st.write("2. Convolution")
     with st.expander("Convolution"):
         st.subheader("Convolution")
+
+        def continuous_time_convolution():
+            st.title("Continuous-Time Convolution")
+
+            # Define the input signals
+            t = np.linspace(-10, 10, 1000)
+            x = st.selectbox(
+                "Input Signal", ["exp(-t^2)", "sin(t)", "cos(t)", "rect(t)", "tri(t)"])
+            if x == "exp(-t^2)":
+                x = np.exp(-t**2)
+            elif x == "sin(t)":
+                x = np.sin(t)
+            elif x == "cos(t)":
+                x = np.cos(t)
+            elif x == "rect(t)":
+                x = np.where(np.abs(t) < 1, 1, 0)
+            elif x == "tri(t)":
+                x = np.where(t < 0, 0, 1-t)
+                x = np.where(t > 1, 0, x)
+
+            h = st.selectbox("Impulse Response", [
+                "exp(-t^2)", "sin(t)", "cos(t)", "rect(t)", "tri(t)"])
+            if h == "exp(-t^2)":
+                h = np.exp(-t**2)
+            elif h == "sin(t)":
+                h = np.sin(t)
+            elif h == "cos(t)":
+                h = np.cos(t)
+            elif h == "rect(t)":
+                h = np.where(np.abs(t) < 1, 1, 0)
+            elif h == "tri(t)":
+                h = np.where(t < 0, 0, 1-t)
+                h = np.where(t > 1, 0, h)
+
+            # Perform the convolution
+            y = convolve(x, h, mode='same') / len(t)
+
+            # Plot the signals and the convolution result
+            fig, ax = plt.subplots(3, 1, figsize=(8, 8))
+
+            ax[0].plot(t, x)
+            ax[0].set_title("Input Signal x(t)")
+
+            ax[1].plot(t, h)
+            ax[1].set_title("Impulse Response h(t)")
+
+            ax[2].plot(t, y)
+            ax[2].set_title("Convolution Result y(t)")
+
+            st.pyplot(fig)
+
+        def discrete_time_convolution():
+            st.title("Discrete-Time Convolution")
+
+            # Define the input signals
+            n = np.arange(-10, 11)
+            x = st.selectbox(
+                "Input Signal", ["exp(-n^2/10)", "sin(n)", "cos(n)", "rect(n)", "tri(n)"])
+            if x == "exp(-n^2/10)":
+                x = np.exp(-n**2/10)
+            elif x == "sin(n)":
+                x = np.sin(n)
+            elif x == "cos(n)":
+                x = np.cos(n)
+            elif x == "rect(n)":
+                x = np.where(np.abs(n) < 1, 1, 0)
+            elif x == "tri(n)":
+                x = np.where(n < 0, 0, 1-n)
+                x = np.where(n > 1, 0, x)
+
+            h = st.selectbox("Impulse Response", [
+                "exp(-n^2/10)", "sin(n)", "cos(n)", "rect(n)", "tri(n)"])
+            if h == "exp(-n^2/10)":
+                h = np.exp(-n**2/10)
+            elif h == "sin(n)":
+                h = np.sin(n)
+            elif h == "cos(n)":
+                h = np.cos(n)
+            elif h == "rect(n)":
+                h = np.where(np.abs(n) < 1, 1, 0)
+            elif h == "tri(n)":
+                h = np.where(n < 0, 0, 1-n)
+                h = np.where(n > 1, 0, h)
+
+            # Perform the convolution
+            y = np.convolve(x, h, mode='same') / len(n)
+
+            # Plot the signals and the convolution result
+            fig, ax = plt.subplots(3, 1, figsize=(8, 8))
+
+            ax[0].stem(n, x)
+            ax[0].set_title("Input Signal x[n]")
+
+            ax[1].stem(n, h)
+            ax[1].set_title("Impulse Response h[n]")
+
+            ax[2].stem(n, y)
+            ax[2].set_title("Convolution Result y[n]")
+
+            st.pyplot(fig)
+
         convolution_type = st.selectbox(
-            "Convolution Type", ("Discrete Time", "Continuous Time"))
-        if convolution_type == "Discrete Time":
-            st.write("Discrete Time Convolution")
-        else:
-            st.write("Continuous Time Convolution")
+            "Convolution Type", ("Discrete-Time Convolution", "Continuous-Time Convolution"))
+
+        if convolution_type == "Continuous-Time Convolution":
+            continuous_time_convolution()
+        elif convolution_type == "Discrete-Time Convolution":
+            discrete_time_convolution()
 
     st.write("3. Modulation")
     with st.expander("Modulation"):
