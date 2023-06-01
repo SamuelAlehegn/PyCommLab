@@ -1,9 +1,9 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.signal as signal
+# import scipy.signal as signal
 from scipy.signal import convolve
-
+from scipy import signal
 
 st.set_page_config(page_title="Non Deterministic Source",  layout="wide",
                    initial_sidebar_state="auto", )
@@ -27,117 +27,58 @@ with st.container():
 
     st.write("1. Analog to Digital Conversion")
     with st.expander("PULSE CODE MODULATION"):
-        # INPUT
-        signal_Type = st.selectbox("Signal Type", ("Sine", "Cosine"))
-        amplitude = st.slider(
-            "Amplitude", min_value=1, max_value=10, step=1)
-        frequency = st.slider("Frequency", min_value=1,
-                              max_value=10, step=1)
-        theta = st.slider("Theta", min_value=0, max_value=360, step=1)
-        sampling_frequency = st.slider(
-            "Sampling Frequency", min_value=1, max_value=5, step=1)
 
-        bit_rate = st.slider("Bit Rate", min_value=1,
-                             max_value=100, step=1)
-        bit_depth = st.slider(
-            "Bit Depth", min_value=1, max_value=100, step=1)
-        # bit_rate = st.slider("Bit Rate", min_value=1, max_value=100, step=1)
-        # bit_depth = st.slider("Bit Depth", min_value=1, max_value=100, step=1)
-        if st.button("Generate Signal"):
-            if signal_Type == "Sine":
-                t = np.arange(0, 2*np.pi, 0.01)
-                x = amplitude*np.sin(2*np.pi*frequency*t+theta)
-                fig = plt.plot(t, x)
-                plt.xlabel("Time")
-                plt.ylabel("Amplitude")
-                plt.title("Sine Wave")
-                plt.grid()
-                st.pyplot()
-            else:
-                t = np.arange(0, 2*np.pi, 0.01)
-                x = amplitude*np.cos(2*np.pi*frequency*t+theta)
-                plt.plot(t, x)
-                plt.xlabel("Time")
-                plt.ylabel("Amplitude")
-                plt.title("Cosine Wave")
-                plt.grid()
-                st.pyplot()
+        st.subheader("Pulse Code Modulation")
+        t = np.linspace(0, 1, 1020)
+        f = 5
+        signal = np.sin(2 * np.pi * f * t)
+        # Sampling
+        sampling_freq = st.slider("Sampling Frequency", 20, 200, 100)
+        sampling_period = 1 / sampling_freq
+        samples = signal[::int(sampling_period * 1002)]  # Modified line
+        # st.write("Sampled Signal:", samples)
 
-# Sampling
-            st.write("I. Sampling")
-            st.write("Sampling Frequency: ", sampling_frequency)
-            sampling_period = 1/sampling_frequency
-            st.write("Sampling Period: ", sampling_period)
+        # Quantization
+        num_bits = st.slider("Number of Quantization Bits", 1, 8, 4)
+        quantization_levels = 2**num_bits
+        quantization_step = (
+            np.max(samples) - np.min(samples)) / quantization_levels
+        quantized_samples = np.round(
+            samples / quantization_step) * quantization_step
+        st.write("Quantized Signal:", quantized_samples)
 
-            if signal_Type == "Sine":
+        # Encoding
+        encoded_samples = np.uint8(
+            (quantized_samples - np.min(quantized_samples)) / quantization_step)
+        st.write("Encoded Signal:", encoded_samples)
 
-                n = np.arange(0, 2*np.pi/sampling_period, 1)
-                sampled_signal = amplitude * \
-                    np.sin(2*np.pi*frequency*n*sampling_period + theta)
-                plt.stem(n*sampling_period, sampled_signal)
-                plt.xlabel("Time")
-                plt.ylabel("Amplitude")
-                plt.title("Sampled Signal")
-                plt.grid()
-                st.pyplot()
-            else:
+        # Decoding
+        decoded_samples = encoded_samples * \
+            quantization_step + np.min(quantized_samples)
 
-                n = np.arange(0, 2*np.pi, 1/sampling_frequency)
-                sampled_signal = amplitude * \
-                    np.cos(2*np.pi*frequency*n*sampling_period + theta)
-                # plt.stem(n, x[::int(1/sampling_frequency)])
-                plt.xlabel("Time")
-                plt.ylabel("Amplitude")
-                plt.title("Sampled Signal")
-                plt.grid()
-                st.pyplot()
+        # Reconstruction
+        reconstructed_signal = np.repeat(decoded_samples, int(
+            sampling_period * 1002))  # Modified line
 
-            st.write("II. Quantization")
-            st.write("Bit Rate: ", bit_rate)
-            st.write("Bit Depth: ", bit_depth)
-            quantization_levels = 2**bit_depth
-            st.write("Quantization Levels: ", quantization_levels)
-            quantization_interval = 2*amplitude/quantization_levels
-            st.write("Quantization Interval: ", quantization_interval)
-            quantization_error = quantization_interval/2
-            st.write("Quantization Error: ", quantization_error)
-            quantized_signal = np.round(sampled_signal/quantization_interval)
+        # Plot the results
+        fig, ax = plt.subplots(4, 1, figsize=(8, 10))
+        ax[0].plot(t, signal)
+        ax[0].set_title("Original Signal")
+        ax[1].stem(samples, use_line_collection=True)
+        ax[1].set_title("Sampled Signal")
+        ax[2].stem(quantized_samples, use_line_collection=True)
+        ax[2].set_title("Quantized Signal")
+        ax[3].stem(encoded_samples, use_line_collection=True)
+        ax[3].set_title("Encoded Signal")
+        st.pyplot(fig)
 
-            # quantized_signal = np.round(x * (2**(bit_depth-1)-1))
-
-            # st.write("Quantized Signal: ", quantized_signal)
-            plt.stem(n*sampling_period, quantized_signal)
-            plt.xlabel("Time")
-            plt.ylabel("Amplitude")
-            plt.title("Quantized Signal")
-            plt.grid()
-            st.pyplot()
-
-# Encoding
-            st.write("III. Encoding")
-
-            encoded_signal = np.zeros_like(quantized_signal, dtype=int)
-            for i in range(len(quantized_signal)):
-                if i == 0:
-                    encoded_signal[i] = quantized_signal[i]
-                else:
-                    encoded_signal[i] = quantized_signal[i] - \
-                        quantized_signal[i-1]
-
-            # Print the encoded signal
-            print(encoded_signal)
-            st.write("Encoded Signal: ", encoded_signal)
-
-            plt.stem(n*sampling_period, encoded_signal)
-            plt.xlabel("Time")
-            plt.ylabel("Amplitude")
-            plt.title("Encoded Signal")
-            plt.grid()
-            st.pyplot()
-
-    # with column_two:
-    #     with st.expander("DELTA MODULATION"):
-    #         st.subheader
+        # Plot the reconstructed signal
+        fig, ax = plt.subplots(1, 1)
+        ax.plot(t, signal, label="Original Signal")
+        ax.plot(t, reconstructed_signal, label="Reconstructed Signal")
+        ax.legend()
+        ax.set_title("Reconstructed Signal vs Original Signal")
+        st.pyplot(fig)
 
     st.write("2. Convolution")
     with st.expander("Convolution"):
