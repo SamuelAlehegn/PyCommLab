@@ -13,7 +13,6 @@ st.set_page_config(page_title="Image Source",  layout="wide",
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
 
-
 # ********************************************************
 
 
@@ -69,22 +68,22 @@ def huffman_decoding(encoded_data, huffman_code):
 # st.title("Huffman Coding for Image Compression")
 
 
-# Get input image file from user
-image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+# # Get input image file from user
+# image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
-if image_file is not None:
-    # Read image data as bytes
-    image_data = image_file.read()
+# if image_file is not None:
+#     # Read image data as bytes
+#     image_data = image_file.read()
 
-    # Encode image data using Huffman coding
-    encoded_data, huffman_code = huffman_encoding(image_data)
+#     # Encode image data using Huffman coding
+#     encoded_data, huffman_code = huffman_encoding(image_data)
 
-    # Decode encoded data back to the original image data
-    decoded_data = huffman_decoding(encoded_data, huffman_code)
+#     # Decode encoded data back to the original image data
+#     decoded_data = huffman_decoding(encoded_data, huffman_code)
 
-    # Display original and decoded images
-    st.image(image_data, caption="Original Image")
-    st.image(decoded_data, caption="Decoded Image")
+#     # Display original and decoded images
+#     st.image(image_data, caption="Original Image")
+#     st.image(decoded_data, caption="Decoded Image")
 
 # ********************************************************
 # Run-length encoding (RLE)
