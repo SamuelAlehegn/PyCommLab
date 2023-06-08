@@ -125,10 +125,25 @@ with st.expander("Source Coding"):
                 encoded_probabilities = list(get_frequency(encoding).values())
                 encoded_entropy = entropy(encoded_probabilities)
 
+                # Convert Huffman-encoded signal to digital and plot in time and frequency domains
+                encoded_sig = np.array([int(bit) for bit in encoding])
+                encoded_sig_digital = signal.resample(
+                    encoded_sig, len(encoded_sig))
+                t_encoded = np.arange(len(encoding)) / fs
+                fig2, ax2 = plt.subplots(2, 1, figsize=(10, 10))
+                ax2[0].plot(t_encoded, encoded_sig_digital)
+                ax2[0].set_title("Encoded Signal (Time Domain)")
+                ax2[0].set_xlabel("Time (s)")
+                ax2[0].set_ylabel("Amplitude")
+                ax2[1].magnitude_spectrum(encoded_sig_digital, Fs=fs)
+                ax2[1].set_title("Encoded Signal (Frequency Domain)")
+                ax2[1].set_xlabel("Frequency (Hz)")
+                ax2[1].set_ylabel("Magnitude")
+
                 st.pyplot(fig1)
 
                 # Display the results
-                st.write("Input text: ", text)
+                st.write("Input text:", text)
                 st.write("Huffman tree: ", huffman_tree)
                 st.write("Encoded text: ", encoding)
                 st.write("Decoded text: ", decoding)
@@ -141,12 +156,12 @@ with st.expander("Source Coding"):
                 efficiency = input_entropy / average_bits_per_symbol
                 st.write("Average number of bits", average_bits_per_symbol)
                 st.write("Efficiency", efficiency)
+                st.pyplot(fig2)
 
                 huffman_encoding_output = encoding
 
             else:
                 st.warning("Enter more than one alphabet")
-
         elif encoding_scheme == "Arithmetic Coding":
             st.write("Arithmetic Coding")
 
@@ -220,7 +235,7 @@ with st.expander("Source Coding"):
 with st.expander("Cahnnel Coding"):
     st.write("Channel Coding")
     cahnnel_encoding_scheme = st.selectbox("Select the Cahnnel Coding scheme", [
-        "Convolutional Coding", "Block Coding"])
+        "Convolutional Coding", "Block Coding", "Turbo Coding"])
     if encoding_scheme == "Huffman Coding" and user_input:
 
         if cahnnel_encoding_scheme == "Convolutional Coding":
@@ -297,14 +312,531 @@ with st.expander("Cahnnel Coding"):
             # blocks = blocks.split(',')
             # decoded_binary_str = block_decode(blocks)
             # st.write(f'Decoded binary string: {decoded_binary_str}')
+        elif cahnnel_encoding_scheme == "Turbo Coding":
+            st.write("Turbo Coding")
 
 with st.expander("Modulation"):
     st.write("Modulation")
     modulation_scheme = st.selectbox(
-        "Select the Modulation scheme", ["ASK", "PSK", "FSK"])
+        "Select the Modulation scheme", ["ASK", "PSK", "FSK", "QAM", "4QAM", "8QAM", "16QAM", "64QAM"])
     if modulation_scheme == "ASK":
-        st.write("Amplitude Shift Keying")
+        st.write("2-level ASK Modulation")
+        # User input
+        data = st.text_input('Data bits (e.g. 10101)')
+        bit_rate = st.number_input(
+            'Bit rate', min_value=1, max_value=10, value=2)
+        amp = st.number_input('Amplitude', min_value=1, max_value=10, value=5)
+        carrier_freq = st.number_input(
+            'Carrier frequency', min_value=1, max_value=10, value=2)
+
+        # Convert data to array of integers
+        data = np.array([int(bit) for bit in data])
+
+        # Time axis
+        time = np.linspace(0, len(data)/bit_rate, num=len(data)*100)
+
+        # Carrier signal
+        carrier = amp * np.sin(2 * np.pi * carrier_freq * time)
+
+        # ASK signal
+        ask_signal = np.zeros_like(time)
+        for i in range(len(data)):
+            if data[i] == 1:
+                ask_signal[i*100:(i+1)*100] = carrier[i*100:(i+1)*100]
+            else:
+                ask_signal[i*100:(i+1)*100] = 0
+
+        # Unipolar NRZ signal
+        nrz_signal = np.zeros_like(time)
+        for i in range(len(data)):
+            if data[i] == 1:
+                nrz_signal[i*100:(i+1)*100] = amp
+            else:
+                nrz_signal[i*100:(i+1)*100] = 0
+
+        # Plot signals
+        fig, axs = plt.subplots(3, 1)
+
+        axs[0].plot(time, nrz_signal)
+        axs[0].set_title('Data bits')
+        axs[0].set_xlabel('Time')
+        axs[0].set_ylabel('Amplitude')
+
+        axs[1].plot(time, carrier)
+        axs[1].set_title('Carrier signal')
+        axs[1].set_xlabel('Time')
+        axs[1].set_ylabel('Amplitude')
+
+        axs[2].plot(time, ask_signal)
+        axs[2].set_title('ASK signal')
+        axs[2].set_xlabel('Time')
+        axs[2].set_ylabel('Amplitude')
+
+        # axs[3].stem(range(len(data)), data)
+        # axs[3].set_title('Data bits')
+        # axs[3].set_xlabel('Bit index')
+        # axs[3].set_ylabel('Amplitude')
+
+        st.pyplot(fig)
+
     elif modulation_scheme == "PSK":
         st.write("Phase Shift Keying")
+
+        # st.title('Binary Phase-shift keying (BPSK) Modulation')
+
+        # User input for bit sequence
+        user_input = st.text_input('Enter a bit sequence (e.g. 1011):')
+
+        # User input for carrier frequency
+        fc = st.number_input(
+            'Enter the carrier frequency (Hz):', min_value=0.0)
+
+        if user_input and fc:
+            # Convert user input to list of integers
+            bit_sequence = [int(bit) for bit in user_input]
+
+            # Parameters
+            T = 1   # bit duration
+            Fs = 100  # sampling frequency
+
+            t = np.arange(0, len(bit_sequence)*T, 1/Fs)
+            x = np.array([])
+            carrier = np.array([])
+            nrz = np.array([])
+
+            # Generate BPSK signal, carrier frequency and NRZ signal
+            for bit in bit_sequence:
+                if bit == 1:
+                    x = np.append(x, np.sin(2*np.pi*fc*t[:Fs]))
+                    carrier = np.append(carrier, np.sin(2*np.pi*fc*t[:Fs]))
+                    nrz = np.append(nrz, np.ones(Fs))
+                else:
+                    x = np.append(x, -np.sin(2*np.pi*fc*t[:Fs]))
+                    carrier = np.append(carrier, np.sin(2*np.pi*fc*t[:Fs]))
+                    nrz = np.append(nrz, -np.ones(Fs))
+
+            # Plot BPSK signal, carrier frequency and NRZ signal
+            fig, axs = plt.subplots(3, sharex=True)
+            axs[0].plot(t, nrz)
+            axs[0].set_xlabel('Time')
+            axs[0].set_ylabel('Amplitude')
+            axs[0].set_title('Data bits')
+
+            axs[1].plot(t, carrier)
+            axs[1].set_ylabel('Amplitude')
+            axs[1].set_title(f'Carrier frequency ({fc} Hz)')
+
+            axs[2].plot(t, x)
+            axs[2].set_ylabel('Amplitude')
+            axs[2].set_title('BPSK Signal')
+
+            st.pyplot(fig)
     elif modulation_scheme == "FSK":
         st.write("Frequency Shift Keying")
+
+        # st.title('Frequency-shift keying (FSK)')
+
+        # User input for bit sequence
+        user_input = st.text_input('Enter a bit sequence (e.g. 1011):')
+
+        # User input for carrier frequencies
+        f1 = st.number_input(
+            'Enter the carrier frequency for bit 1 (Hz):', min_value=0.0)
+        f2 = st.number_input(
+            'Enter the carrier frequency for bit 0 (Hz):', min_value=0.0)
+
+        if user_input and f1 and f2:
+            # Convert user input to list of integers
+            bit_sequence = [int(bit) for bit in user_input]
+
+            # Parameters
+            T = 1   # bit duration
+            Fs = 100  # sampling frequency
+
+            t = np.arange(0, len(bit_sequence)*T, 1/Fs)
+            x = np.array([])
+            carrier1 = np.array([])
+            carrier2 = np.array([])
+            nrz = np.array([])
+
+            # Generate FSK signal, carrier frequencies and NRZ signal
+            for bit in bit_sequence:
+                if bit == 1:
+                    x = np.append(x, np.sin(2*np.pi*f1*t[:Fs]))
+                    carrier1 = np.append(carrier1, np.sin(2*np.pi*f1*t[:Fs]))
+                    carrier2 = np.append(carrier2, np.zeros(Fs))
+                    nrz = np.append(nrz, np.ones(Fs))
+                else:
+                    x = np.append(x, np.sin(2*np.pi*f2*t[:Fs]))
+                    carrier1 = np.append(carrier1, np.zeros(Fs))
+                    carrier2 = np.append(carrier2, np.sin(2*np.pi*f2*t[:Fs]))
+                    nrz = np.append(nrz, -np.ones(Fs))
+
+            # Plot FSK signal, carrier frequencies and NRZ signal
+            fig, axs = plt.subplots(4, sharex=True)
+            axs[0].plot(t, nrz)
+            axs[0].set_xlabel('Time')
+            axs[0].set_ylabel('Amplitude')
+            axs[0].set_title('Data bits')
+
+            axs[1].plot(t, carrier1)
+            axs[1].set_ylabel('Amplitude')
+            axs[1].set_title(f'Carrier frequency for bit 1 ({f1} Hz)')
+            axs[2].plot(t, carrier2)
+            axs[2].set_ylabel('Amplitude')
+            axs[2].set_title(f'Carrier frequency for bit 0 ({f2} Hz)')
+
+            axs[3].plot(t, x)
+            axs[3].set_ylabel('Amplitude')
+            axs[3].set_title('FSK Signal')
+            st.pyplot(fig)
+
+    elif modulation_scheme == "QAM":
+        st.write("Quadrature Amplitude Modulation")
+        # st.title('Quadrature Amplitude Modulation (QAM)')
+
+        # User input for binary sequence
+        user_input = st.text_input(
+            'Enter a binary sequence (e.g. 000001010011100101101111):')
+
+        # User input for carrier frequency
+        fc = st.number_input(
+            'Enter the carrier frequency (Hz):', min_value=0.0)
+
+        # User input for number of symbols
+        M = st.number_input('Enter the number of symbols:',
+                            min_value=2, step=1)
+
+        if user_input and fc and M:
+            # Parameters
+            k = int(np.log2(M))  # bits per symbol
+            T = 1   # symbol duration
+            Fs = 100  # sampling frequency
+
+            # Convert binary sequence to symbol sequence
+            symbol_sequence = [int(user_input[i:i+k], 2)
+                               for i in range(0, len(user_input), k)]
+
+            t = np.arange(0, len(symbol_sequence)*T, 1/Fs)
+            x_I = np.array([])
+            x_Q = np.array([])
+            carrier_I = np.array([])
+            carrier_Q = np.array([])
+            nrz = np.array([])
+
+            # Generate QAM signal and carrier frequencies
+            n_side = int(np.sqrt(M))
+
+            for symbol in symbol_sequence:
+                I = (symbol % n_side) - (n_side-1)/2
+                Q = (symbol // n_side) - (n_side-1)/2
+
+                x_I = np.append(x_I, I * np.sin(2*np.pi*fc*t[:Fs]))
+                x_Q = np.append(x_Q, Q * np.sin(2*np.pi*fc*t[:Fs] + np.pi/2))
+                carrier_I = np.append(carrier_I, np.sin(2*np.pi*fc*t[:Fs]))
+                carrier_Q = np.append(carrier_Q, np.sin(
+                    2*np.pi*fc*t[:Fs] + np.pi/2))
+
+                # Convert symbol to bit sequence
+                bit_sequence = [int(bit) for bit in format(symbol, f'0{k}b')]
+                for bit in bit_sequence:
+                    if bit == 1:
+                        nrz = np.append(nrz, np.ones(int(Fs/k)))
+                    else:
+                        nrz = np.append(nrz, -np.ones(int(Fs/k)))
+
+            x = x_I + x_Q
+
+            # Plot QAM signal and carrier frequencies
+            fig1, axs1 = plt.subplots(4, sharex=True)
+
+            axs1[0].plot(np.arange(0, len(nrz)/Fs, 1/Fs), nrz)
+            axs1[0].set_xlabel('Time')
+            axs1[0].set_ylabel('Amplitude')
+            axs1[0].set_title('Data bits')
+
+            axs1[1].plot(t, carrier_I)
+            axs1[1].set_ylabel('Amplitude')
+            axs1[1].set_title(f'In-phase carrier frequency ({fc} Hz)')
+
+            axs1[2].plot(t, carrier_Q)
+            axs1[2].set_ylabel('Amplitude')
+            axs1[2].set_title(f'Quadrature carrier frequency ({fc} Hz)')
+
+            axs1[3].plot(t, x)
+            axs1[3].set_ylabel('Amplitude')
+            axs1[3].set_title('QAM Signal')
+
+            st.pyplot(fig1)
+
+            # Plot constellation diagram in new figure
+            fig2, ax2 = plt.subplots()
+            constellation_x = [(i - (n_side-1)/2) for i in range(n_side)
+                               for j in range(n_side)]
+            constellation_y = [(j - (n_side-1)/2) for i in range(n_side)
+                               for j in range(n_side)]
+            ax2.scatter(constellation_x, constellation_y)
+            ax2.set_xlabel('In-phase')
+            ax2.set_ylabel('Quadrature')
+            ax2.set_title('Constellation Diagram')
+            st.pyplot(fig2)
+
+    elif modulation_scheme == "4QAM":
+        st.write("4 Quadrature Amplitude Modulation")
+
+        # User input for binary sequence
+        user_input = st.text_input('Enter a binary sequence (e.g. 00011011):')
+
+        # User input for carrier frequency
+        fc = st.number_input(
+            'Enter the carrier frequency (Hz):', min_value=0.0)
+
+        if user_input and fc:
+            # Parameters
+            M = 4  # number of symbols
+            k = int(np.log2(M))  # bits per symbol
+            T = 1   # symbol duration
+            Fs = 100  # sampling frequency
+
+            # Convert binary sequence to symbol sequence
+            symbol_sequence = [int(user_input[i:i+k], 2)
+                               for i in range(0, len(user_input), k)]
+
+            t = np.arange(0, len(symbol_sequence)*T, 1/Fs)
+            x_I = np.array([])
+            x_Q = np.array([])
+            carrier_I = np.array([])
+            carrier_Q = np.array([])
+            nrz = np.array([])
+
+            # Generate QAM signal and carrier frequencies
+            n_side = int(np.sqrt(M))
+
+            for symbol in symbol_sequence:
+                I = (symbol % n_side) - (n_side-1)/2
+                Q = (symbol // n_side) - (n_side-1)/2
+
+                x_I = np.append(x_I, I * np.sin(2*np.pi*fc*t[:Fs]))
+                x_Q = np.append(x_Q, Q * np.sin(2*np.pi*fc*t[:Fs] + np.pi/2))
+                carrier_I = np.append(carrier_I, np.sin(2*np.pi*fc*t[:Fs]))
+                carrier_Q = np.append(carrier_Q, np.sin(
+                    2*np.pi*fc*t[:Fs] + np.pi/2))
+
+                # Convert symbol to bit sequence
+                bit_sequence = [int(bit) for bit in format(symbol, f'0{k}b')]
+                for bit in bit_sequence:
+                    if bit == 1:
+                        nrz = np.append(nrz, np.ones(int(Fs/k)))
+                    else:
+                        nrz = np.append(nrz, -np.ones(int(Fs/k)))
+
+            x = x_I + x_Q
+
+            # Plot QAM signal and carrier frequencies
+            fig1, axs1 = plt.subplots(4, sharex=True)
+
+            axs1[0].plot(np.arange(0, len(nrz)/Fs, 1/Fs), nrz)
+            axs1[0].set_xlabel('Time')
+            axs1[0].set_ylabel('Amplitude')
+            axs1[0].set_title('Data bits')
+
+            axs1[1].plot(t, carrier_I)
+            axs1[1].set_ylabel('Amplitude')
+            axs1[1].set_title(f'In-phase carrier frequency ({fc} Hz)')
+
+            axs1[2].plot(t, carrier_Q)
+            axs1[2].set_ylabel('Amplitude')
+            axs1[2].set_title(f'Quadrature carrier frequency ({fc} Hz)')
+
+            axs1[3].plot(t, x)
+            axs1[3].set_ylabel('Amplitude')
+            axs1[3].set_title('4-QAM Signal')
+            st.pyplot(fig1)
+
+            # Plot constellation diagram in new figure
+            fig2, ax2 = plt.subplots()
+            constellation_x = [(i - (n_side-1)/2) for i in range(n_side)
+                               for j in range(n_side)]
+            constellation_y = [(j - (n_side-1)/2) for i in range(n_side)
+                               for j in range(n_side)]
+            ax2.scatter(constellation_x, constellation_y)
+            ax2.set_xlabel('In-phase')
+            ax2.set_ylabel('Quadrature')
+            ax2.set_title('Constellation Diagram')
+            st.pyplot(fig2)
+
+    elif modulation_scheme == "8QAM":
+        st.write("8 Quadrature Amplitude Modulation")
+
+        # User input for binary sequence
+        user_input = st.text_input(
+            'Enter a binary sequence (e.g. 000001010011100101101111):')
+
+        # User input for carrier frequency
+        fc = st.number_input(
+            'Enter the carrier frequency (Hz):', min_value=0.0)
+
+        if user_input and fc:
+            # Parameters
+            M = 8  # number of symbols
+            k = int(np.log2(M))  # bits per symbol
+            T = 1   # symbol duration
+            Fs = 100  # sampling frequency
+
+            # Convert binary sequence to symbol sequence
+            symbol_sequence = [int(user_input[i:i+k], 2)
+                               for i in range(0, len(user_input), k)]
+
+            t = np.arange(0, len(symbol_sequence)*T, 1/Fs)
+            x_I = np.array([])
+            x_Q = np.array([])
+            carrier_I = np.array([])
+            carrier_Q = np.array([])
+            nrz = np.array([])
+
+            # Generate QAM signal and carrier frequencies
+            for symbol in symbol_sequence:
+                I = (symbol % 4) - 1.5
+                Q = (symbol // 4) - 0.5
+                x_I = np.append(x_I, I * np.sin(2*np.pi*fc*t[:Fs]))
+                x_Q = np.append(x_Q, Q * np.sin(2*np.pi*fc*t[:Fs] + np.pi/2))
+                carrier_I = np.append(carrier_I, np.sin(2*np.pi*fc*t[:Fs]))
+                carrier_Q = np.append(carrier_Q, np.sin(
+                    2*np.pi*fc*t[:Fs] + np.pi/2))
+
+                # Convert symbol to bit sequence
+                bit_sequence = [int(bit) for bit in format(symbol, f'0{k}b')]
+                for bit in bit_sequence:
+                    if bit == 1:
+                        nrz = np.append(nrz, np.ones(int(Fs/k)))
+                    else:
+                        nrz = np.append(nrz, -np.ones(int(Fs/k)))
+
+            x = x_I + x_Q
+
+            # Plot QAM signal and carrier frequencies
+
+            fig1, axs1 = plt.subplots(4, sharex=True)
+            axs1[0].plot(np.arange(0, len(nrz)/Fs, 1/Fs), nrz)
+            axs1[0].set_xlabel('Time')
+            axs1[0].set_ylabel('Amplitude')
+            axs1[0].set_title('Data bits')
+
+            axs1[1].plot(t, carrier_I)
+            axs1[1].set_ylabel('Amplitude')
+            axs1[1].set_title(f'In-phase carrier frequency ({fc} Hz)')
+            axs1[2].plot(t, carrier_Q)
+            axs1[2].set_ylabel('Amplitude')
+            axs1[2].set_title(f'Quadrature carrier frequency ({fc} Hz)')
+
+            axs1[3].plot(t, x)
+            axs1[3].set_ylabel('Amplitude')
+            axs1[3].set_title('8-QAM Signal')
+
+            st.pyplot(fig1)
+
+            # Plot constellation diagram in new figure
+            fig2, ax2 = plt.subplots()
+
+            constellation = [(I-1.5, Q-0.5)
+                             for I in range(4) for Q in range(2)]
+            constellation_x, constellation_y = zip(*constellation)
+
+            ax2.scatter(constellation_x, constellation_y)
+
+            ax2.set_xlabel('In-phase')
+            ax2.set_ylabel('Quadrature')
+
+            ax2.set_title('Constellation Diagram')
+
+            st.pyplot(fig2)
+
+    elif modulation_scheme == "16QAM":
+        st.write("16 Quadrature Amplitude Modulation")
+        # User input for binary sequence
+        user_input = st.text_input(
+            'Enter a binary sequence (e.g. 000001010011100101101111):')
+
+        # User input for carrier frequency
+        fc = st.number_input(
+            'Enter the carrier frequency (Hz):', min_value=0.0)
+
+        if user_input and fc:
+            # Parameters
+            M = 16  # number of symbols
+            k = int(np.log2(M))  # bits per symbol
+            T = 1  # symbol duration
+            Fs = 100  # sampling frequency
+
+            # Convert binary sequence to symbol sequence
+            symbol_sequence = [int(user_input[i:i+k], 2)
+                               for i in range(0, len(user_input), k)]
+
+            t = np.arange(0, len(symbol_sequence)*T, 1/Fs)
+            x_I = np.array([])
+            x_Q = np.array([])
+            carrier_I = np.array([])
+            carrier_Q = np.array([])
+            nrz = np.array([])
+
+            # Generate QAM signal and carrier frequencies
+            for symbol in symbol_sequence:
+                I = (symbol % 4) - 1.5
+                Q = (symbol // 4) - 1.5
+                x_I = np.append(x_I, I * np.sin(2*np.pi*fc*t[:Fs]))
+                x_Q = np.append(x_Q, Q * np.sin(2*np.pi*fc*t[:Fs] + np.pi/2))
+                carrier_I = np.append(carrier_I, np.sin(2*np.pi*fc*t[:Fs]))
+                carrier_Q = np.append(carrier_Q, np.sin(
+                    2*np.pi*fc*t[:Fs] + np.pi/2))
+
+                # Convert symbol to bit sequence
+                bit_sequence = [int(bit) for bit in format(symbol, f'0{k}b')]
+                for bit in bit_sequence:
+                    if bit == 1:
+                        nrz = np.append(nrz, np.ones(int(Fs/k)))
+                    else:
+                        nrz = np.append(nrz, -np.ones(int(Fs/k)))
+
+            x = x_I + x_Q
+
+            # Plot QAM signal and carrier frequencies
+
+            fig1, axs1 = plt.subplots(4, sharex=True)
+            axs1[0].plot(np.arange(0, len(nrz)/Fs, 1/Fs), nrz)
+            axs1[0].set_xlabel('Time')
+            axs1[0].set_ylabel('Amplitude')
+            axs1[0].set_title('Data bits')
+
+            axs1[1].plot(t, carrier_I)
+            axs1[1].set_ylabel('Amplitude')
+            axs1[1].set_title(f'In-phase carrier frequency ({fc} Hz)')
+            axs1[2].plot(t, carrier_Q)
+            axs1[2].set_ylabel('Amplitude')
+            axs1[2].set_title(f'Quadrature carrier frequency ({fc} Hz)')
+
+            axs1[3].plot(t, x)
+            axs1[3].set_ylabel('Amplitude')
+            axs1[3].set_title('16-QAM Signal')
+
+            st.pyplot(fig1)
+
+            # Plot constellation diagram in new figure
+            fig2, ax2 = plt.subplots()
+
+            constellation_x = [-3, -3, -3, -3, -
+                               1, -1, -1, -1, 1, 1, 1, 1, 3, 3, 3, 3]
+            constellation_y = [-3, -1, 1, 3, -3, -
+                               1, 1, 3, -3, -1, 1, 3, -3, -1, 1, 3]
+
+            ax2.scatter(constellation_x, constellation_y)
+
+            ax2.set_xlabel('In-phase')
+            ax2.set_ylabel('Quadrature')
+
+            ax2.set_title('Constellation Diagram')
+
+            st.pyplot(fig2)
+
+    elif modulation_scheme == "64QAM":
+        st.write("64 Quadrature Amplitude Modulation")
+        # User input for binary sequence
