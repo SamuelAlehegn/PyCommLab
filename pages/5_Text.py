@@ -1068,6 +1068,141 @@ with st.expander("Channel"):
     elif channel_model_type == 'Rayleigh':
         st.write("RAYLEIGH FADING CHANNEL MODEL")
 
+        st.subheader("ASK, PSK and FSK")
+
+        def rayleigh_ask_ber(EbN0_dB):
+            # BER calculation for ASK modulation in Rayleigh fading channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            return 0.5 * (1 - np.sqrt(EbN0 / (EbN0 + 1)))
+
+        def rayleigh_fsk_ber(EbN0_dB):
+            # BER calculation for FSK modulation in Rayleigh fading channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            return 0.5 * np.exp(-EbN0)
+
+        def rayleigh_psk_ber(EbN0_dB):
+            # BER calculation for PSK modulation in Rayleigh fading channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            return 1 - (1 - erfc(np.sqrt(EbN0)))*np.exp(-EbN0)
+
+        # Define the Streamlit app
+
+        # Define the input parameters
+        modulation_scheme = st.selectbox(
+            'Select the Modulation Scheme', ['ASK', 'FSK', 'PSK'])
+        EbN0_min = st.slider('Eb/N0 (dB) minimum', -10, 20, -10, key="RAFPmin")
+        EbN0_max = st.slider('Eb/N0 (dB) maximum', -10, 20, 10, key="RAFPmax")
+        input_bit = st.text_input('Enter the input bit', '0', key="RAFPminInp")
+
+        # Calculate the BER for the selected modulation scheme and channel type
+        if modulation_scheme == 'ASK':
+            ber_func = rayleigh_ask_ber
+        elif modulation_scheme == 'FSK':
+            ber_func = rayleigh_fsk_ber
+        elif modulation_scheme == 'PSK':
+            ber_func = rayleigh_psk_ber
+
+        EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+        ber = ber_func(EbN0_dB)
+
+        # Plot the BER vs. Eb/N0 curve
+        fig1, ax = plt.subplots()
+        ax.semilogy(EbN0_dB, ber)
+        ax.set_xlabel('Eb/N0 (dB)')
+        ax.set_ylabel('Bit Error Rate (BER)')
+        ax.set_title(
+            f'{modulation_scheme} Modulation Scheme in Rayleigh Fading Channel')
+        st.pyplot(fig1)
+
+        if st.button("Plot the BER vs. Eb/N0 curves for all ASK, FSK and PSK modulation schemes"):
+            EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+            ask_ber_func = rayleigh_ask_ber
+            fsk_ber_func = rayleigh_fsk_ber
+            psk_ber_func = rayleigh_psk_ber
+            ask_ber = ask_ber_func(EbN0_dB)
+            fsk_ber = fsk_ber_func(EbN0_dB)
+            psk_ber = psk_ber_func(EbN0_dB)
+
+            # Plot the BER vs. Eb/N0 curves for all ASK, FSK and PSK modulation schemes
+            fig2, ax2 = plt.subplots()
+            ax2.semilogy(EbN0_dB, ask_ber, label='ASK')
+            ax2.semilogy(EbN0_dB, fsk_ber, label='FSK')
+            ax2.semilogy(EbN0_dB, psk_ber, label='PSK')
+
+            ax2.set_xlabel('Eb/N0 (dB)')
+            ax2.set_ylabel('Bit Error Rate (BER)')
+            ax2.set_title(
+                f'ASK, FSK and PSK Modulation Schemes in Rayleigh Fading Channel')
+            ax2.legend()
+
+            st.pyplot(fig2)
+
+        st.subheader("QAM")
+
+        def rayleigh_qam_ber(EbN0_dB, M):
+           # BER calculation for QAM modulation in Rayleigh fading channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return 1 - (1 - 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*EbN0*k/(2*(M-1)))))*np.exp(-EbN0*k)
+
+        # Define the Streamlit app
+
+        # Define the input parameters
+        modulation_scheme = st.selectbox(
+            'Select the Modulation Scheme', ['4-QAM', '8-QAM', '16-QAM', '64-QAM', '128-QAM', '256-QAM'])
+        EbN0_min = st.slider('Eb/N0 (dB) minimum', -10,
+                             20, -10, key='RayleighEb/No_min')
+        EbN0_max = st.slider('Eb/N0 (dB) maximum', -10, 20,
+                             10, key='RayleighEb/No_max')
+        M = int(modulation_scheme.split('-')[0])
+        input_bit = st.text_input(
+            'Enter the input bit', '0', key='RayleighInp')
+
+        # Calculate the BER for the selected modulation scheme and channel type
+        ber_func = rayleigh_qam_ber
+
+        EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+        ber = ber_func(EbN0_dB, M)
+
+        # Plot the BER vs. Eb/N0 curve
+        fig1, ax = plt.subplots()
+        ax.semilogy(EbN0_dB, ber)
+        ax.set_xlabel('Eb/N0 (dB)')
+        ax.set_ylabel('Bit Error Rate (BER)')
+        ax.set_title(
+            f'{modulation_scheme} Modulation Scheme in Rayleigh Fading Channel')
+        st.pyplot(fig1)
+
+        if st.button("Plot the BER vs. Eb/N0 curves for all QAM modulation schemes"):
+            EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+            qam4_ber_func = rayleigh_qam_ber
+            qam8_ber_func = rayleigh_qam_ber
+            qam16_ber_func = rayleigh_qam_ber
+            qam64_ber_func = rayleigh_qam_ber
+            qam128_ber_func = rayleigh_qam_ber
+            qam256_ber_func = rayleigh_qam_ber
+            qam4_ber = qam4_ber_func(EbN0_dB, 4)
+            qam8_ber = qam8_ber_func(EbN0_dB, 8)
+            qam16_ber = qam16_ber_func(EbN0_dB, 16)
+            qam64_ber = qam64_ber_func(EbN0_dB, 64)
+            qam128_ber = qam128_ber_func(EbN0_dB, 128)
+            qam256_ber = qam256_ber_func(EbN0_dB, 256)
+            # Plot the BER vs. Eb/N0 curves for all QAM modulation schemes
+            fig2, ax2 = plt.subplots()
+            ax2.semilogy(EbN0_dB, qam4_ber, label='4-QAM')
+            ax2.semilogy(EbN0_dB, qam8_ber, label='8-QAM')
+            ax2.semilogy(EbN0_dB, qam16_ber, label='16-QAM')
+            ax2.semilogy(EbN0_dB, qam64_ber, label='64-QAM')
+            ax2.semilogy(EbN0_dB, qam128_ber, label='128-QAM')
+            ax2.semilogy(EbN0_dB, qam256_ber, label='256-QAM')
+
+            ax2.set_xlabel('Eb/N0 (dB)')
+            ax2.set_ylabel('Bit Error Rate (BER)')
+            ax2.set_title(f'QAM Modulation Schemes in Rayleigh Fading Channel')
+            ax2.legend()
+
+            st.pyplot(fig2)
+
     elif channel_model_type == 'Rician':
         st.write("RICIAN CHANNEL MODEL")
         st.subheader("ASK, PSK and FSK")
