@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
 from sk_dsp_comm import digitalcom as dc
+from scipy.special import erfc
 
 
 st.set_page_config(page_title="Text Source",  layout="wide",
@@ -823,12 +824,103 @@ with st.expander("Modulation"):
             # Plot constellation diagram in new figure
             fig2, ax2 = plt.subplots()
 
-            constellation_x = [-3, -3, -3, -3, -
-                               1, -1, -1, -1, 1, 1, 1, 1, 3, 3, 3, 3]
-            constellation_y = [-3, -1, 1, 3, -3, -
-                               1, 1, 3, -3, -1, 1, 3, -3, -1, 1, 3]
+            constellation = [(I-1.5, Q-1.5)
+                             for I in range(4) for Q in range(4)]
+            constellation_x, constellation_y = zip(*constellation)
 
             ax2.scatter(constellation_x, constellation_y)
+
+            # Add lines to x and y axes
+            ax2.axhline(0, color='black', linewidth=0.5)
+            ax2.axvline(0, color='black', linewidth=0.5)
+
+            ax2.set_xlabel('In-phase')
+            ax2.set_ylabel('Quadrature')
+
+            ax2.set_title('16-QAM Constellation Diagram')
+
+            st.pyplot(fig2)
+
+    elif modulation_scheme == "64QAM":
+        st.write("64 Quadrature Amplitude Modulation")
+        # User input for binary sequence
+        user_input = st.text_input(
+            'Enter a binary sequence (e.g. 000001010011100101101111):')
+
+        # User input for carrier frequency
+        fc = st.number_input(
+            'Enter the carrier frequency (Hz):', min_value=0.0)
+
+        if user_input and fc:
+            M = 64  # number of symbols
+            k = int(np.log2(M))  # bits per symbol
+            T = 1   # symbol duration
+            Fs = 100  # sampling frequency
+
+            # Convert binary sequence to symbol sequence
+            symbol_sequence = [int(user_input[i:i+k], 2)
+                               for i in range(0, len(user_input), k)]
+
+            t = np.arange(0, len(symbol_sequence)*T, 1/Fs)
+            x_I = np.array([])
+            x_Q = np.array([])
+            carrier_I = np.array([])
+            carrier_Q = np.array([])
+            nrz = np.array([])
+
+            # Generate QAM signal and carrier frequencies
+            for symbol in symbol_sequence:
+                I = (symbol % 8) - 3.5
+                Q = (symbol // 8) - 3.5
+                x_I = np.append(x_I, I * np.sin(2*np.pi*fc*t[:Fs]))
+                x_Q = np.append(x_Q, Q * np.sin(2*np.pi*fc*t[:Fs] + np.pi/2))
+                carrier_I = np.append(carrier_I, np.sin(2*np.pi*fc*t[:Fs]))
+                carrier_Q = np.append(carrier_Q, np.sin(
+                    2*np.pi*fc*t[:Fs] + np.pi/2))
+
+                # Convert symbol to bit sequence
+                bit_sequence = [int(bit) for bit in format(symbol, f'0{k}b')]
+                for bit in bit_sequence:
+                    if bit == 1:
+                        nrz = np.append(nrz, np.ones(int(Fs/k)))
+                    else:
+                        nrz = np.append(nrz, -np.ones(int(Fs/k)))
+
+            x = x_I + x_Q
+
+            # Plot QAM signal and carrier frequencies
+
+            fig1, axs1 = plt.subplots(4, sharex=True)
+            axs1[0].plot(np.arange(0, len(nrz)/Fs, 1/Fs), nrz)
+            axs1[0].set_xlabel('Time')
+            axs1[0].set_ylabel('Amplitude')
+            axs1[0].set_title('Data bits')
+
+            axs1[1].plot(t, carrier_I)
+            axs1[1].set_ylabel('Amplitude')
+            axs1[1].set_title(f'In-phase carrier frequency ({fc} Hz)')
+            axs1[2].plot(t, carrier_Q)
+            axs1[2].set_ylabel('Amplitude')
+            axs1[2].set_title(f'Quadrature carrier frequency ({fc} Hz)')
+
+            axs1[3].plot(t, x)
+            axs1[3].set_ylabel('Amplitude')
+            axs1[3].set_title('64-QAM Signal')
+
+            st.pyplot(fig1)
+
+            # Plot constellation diagram in new figure
+            fig2, ax2 = plt.subplots()
+
+            constellation = [(I-3.5, Q-3.5)
+                             for I in range(8) for Q in range(8)]
+            constellation_x, constellation_y = zip(*constellation)
+
+            ax2.scatter(constellation_x, constellation_y)
+
+            # Add lines to x and y axes
+            ax2.axhline(0, color='black', linewidth=0.5)
+            ax2.axvline(0, color='black', linewidth=0.5)
 
             ax2.set_xlabel('In-phase')
             ax2.set_ylabel('Quadrature')
@@ -837,6 +929,272 @@ with st.expander("Modulation"):
 
             st.pyplot(fig2)
 
-    elif modulation_scheme == "64QAM":
-        st.write("64 Quadrature Amplitude Modulation")
-        # User input for binary sequence
+
+with st.expander("Channel"):
+    st.title("Cahnnel")
+    channel_model_type = st.selectbox(
+        'Select the Channel Type', ['AWGN', 'Rayleigh', 'Rician'])
+
+    if channel_model_type == "AWGN":
+        st.write("Additive White Gaussian Noise")
+
+        def awgn_ask_ber(EbN0_dB, M):
+            # BER calculation for ASK modulation in AWGN channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            return 0.5 * np.exp(-EbN0/(2*M))
+
+        def awgn_psk_ber(EbN0_dB, M):
+            # BER calculation for PSK modulation in AWGN channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return 1/k * erfc(np.sqrt(EbN0/k) * np.sin(np.pi/M))
+
+        def awgn_fsk_ber(EbN0_dB, M):
+            # BER calculation for FSK modulation in AWGN channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return 0.5 * np.exp(-EbN0/(2*k))
+
+        # Define the Streamlit app
+        st.subheader("ASK, PSK and FSK")
+        # Define the input parameters
+        modulation_scheme = st.selectbox(
+            'Select the Modulation Scheme', ['ASK', 'PSK', 'FSK'])
+        # channel_type = st.selectbox('Select the Channel Type', ['AWGN', 'Rayleigh'])
+        EbN0_min = st.slider('Eb/N0 (dB) minimum', -10, 20, -10)
+        EbN0_max = st.slider('Eb/N0 (dB) maximum', -10, 20, 10)
+        M = st.slider('Number of Symbols (M)', 2, 16, 4)
+        input_bit = st.text_input('Enter the input bit', '0')
+
+        # Calculate the BER for the selected modulation scheme and channel type
+        if modulation_scheme == 'ASK':
+            ber_func = awgn_ask_ber
+        elif modulation_scheme == 'PSK':
+            ber_func = awgn_psk_ber
+        elif modulation_scheme == 'FSK':
+            ber_func = awgn_fsk_ber
+
+        EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+        ber = ber_func(EbN0_dB, M)
+
+        # Plot the BER vs. Eb/N0 curve
+        fig1, ax = plt.subplots()
+        ax.semilogy(EbN0_dB, ber)
+        ax.set_xlabel('Eb/N0 (dB)')
+        ax.set_ylabel('Bit Error Rate (BER)')
+        ax.set_title(
+            f'{modulation_scheme} Modulation Scheme in {channel_model_type} Channel for {M} Symbols')
+        st.pyplot(fig1)
+
+        if st.button("Plot the BER vs. Eb/N0 curves for all three modulation schemes"):
+            EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+            ask_ber_func = awgn_ask_ber
+            psk_ber_func = awgn_psk_ber
+            fsk_ber_func = awgn_fsk_ber
+            ask_ber = ask_ber_func(EbN0_dB, M)
+            psk_ber = psk_ber_func(EbN0_dB, M)
+            fsk_ber = fsk_ber_func(EbN0_dB, M)
+            # Plot the BER vs. Eb/N0 curves for all three modulation schemes
+            fig, ax = plt.subplots()
+            ax.semilogy(EbN0_dB, ask_ber, label='ASK')
+            ax.semilogy(EbN0_dB, psk_ber, label='PSK')
+            ax.semilogy(EbN0_dB, fsk_ber, label='FSK')
+            ax.set_xlabel('Eb/N0 (dB)')
+            ax.set_ylabel('Bit Error Rate (BER)')
+            ax.set_title(
+                f'ASK, PSK, and FSK Modulation Schemes in {channel_model_type} Channel for {M} Symbols')
+            ax.legend()
+            st.pyplot(fig)
+
+        def awgn_qam_ber(EbN0_dB, M):
+            # BER calculation for QAM modulation in AWGN channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*EbN0*k/(2*(M-1))))
+
+        # Define the Streamlit app
+        st.subheader("QAM")
+        # Define the input parameters
+        modulation_scheme = st.selectbox(
+            'Select the Modulation Scheme', ['4-QAM', '8-QAM', '16-QAM', '64-QAM', '128-QAM', '256-QAM'])
+        min_ebn0 = st.slider('Eb/N0 (dB) minimum', -10,
+                             20, -10, key='EbN0_min')
+        EbN0_max = st.slider('Eb/N0 (dB) maximum', -10, 20, 10, key='EbN0_max')
+        M = int(modulation_scheme.split('-')[0])
+        input_bit = st.text_input('Enter the input bit', '0', key='inp')
+
+        # Calculate the BER for the selected modulation scheme and channel type
+        ber_func = awgn_qam_ber
+
+        EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+        ber = ber_func(EbN0_dB, M)
+
+        # Plot the BER vs. Eb/N0 curve
+        fig1, ax = plt.subplots()
+        ax.semilogy(EbN0_dB, ber)
+        ax.set_xlabel('Eb/N0 (dB)')
+        ax.set_ylabel('Bit Error Rate (BER)')
+        ax.set_title(f'{modulation_scheme} Modulation Scheme in AWGN Channel')
+        st.pyplot(fig1)
+
+        if st.button("Plot the BER vs. Eb/N0 curves for all QAM modulation schemes"):
+            EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+            qam4_ber_func = awgn_qam_ber
+            qam8_ber_func = awgn_qam_ber
+            qam16_ber_func = awgn_qam_ber
+            qam64_ber_func = awgn_qam_ber
+            qam128_ber_func = awgn_qam_ber
+            qam256_ber_func = awgn_qam_ber
+            qam4_ber = qam4_ber_func(EbN0_dB, 4)
+            qam8_ber = qam8_ber_func(EbN0_dB, 8)
+            qam16_ber = qam16_ber_func(EbN0_dB, 16)
+            qam64_ber = qam64_ber_func(EbN0_dB, 64)
+            qam128_ber = qam128_ber_func(EbN0_dB, 128)
+            qam256_ber = qam256_ber_func(EbN0_dB, 256)
+            # Plot the BER vs. Eb/N0 curves for all QAM modulation schemes
+            fig, ax = plt.subplots()
+            ax.semilogy(EbN0_dB, qam4_ber, label='4-QAM')
+            ax.semilogy(EbN0_dB, qam8_ber, label='8-QAM')
+            ax.semilogy(EbN0_dB, qam16_ber, label='16-QAM')
+            ax.semilogy(EbN0_dB, qam64_ber, label='64-QAM')
+            ax.semilogy(EbN0_dB, qam128_ber, label='128-QAM')
+            ax.semilogy(EbN0_dB, qam256_ber, label='256-QAM')
+            ax.set_xlabel('Eb/N0 (dB)')
+            ax.set_ylabel('Bit Error Rate (BER)')
+            ax.set_title(f'QAM Modulation Schemes in AWGN Channel')
+            ax.legend()
+            st.pyplot(fig)
+
+    elif channel_model_type == 'Rayleigh':
+        st.write("RAYLEIGH FADING CHANNEL MODEL")
+
+    elif channel_model_type == 'Rician':
+        st.write("RICIAN CHANNEL MODEL")
+        st.subheader("ASK, PSK and FSK")
+
+        def rician_ask_ber(EbN0_dB, M, K):
+            # BER calculation for ASK modulation in Rician channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            return 0.5 * np.exp(-EbN0/(2*M)) * (1 - np.sqrt(K/(K+1)))
+
+        def rician_psk_ber(EbN0_dB, M, K):
+            # BER calculation for PSK modulation in Rician channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return 1/k * erfc(np.sqrt(EbN0/k) * np.sin(np.pi/M)) * (1 - np.sqrt(K/(K+1)))
+
+        def rician_fsk_ber(EbN0_dB, M, K):
+            # BER calculation for FSK modulation in Rician channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return 0.5 * np.exp(-EbN0/(2*k)) * (1 - np.sqrt(K/(K+1)))
+
+        # Define the Streamlit app
+
+        modulation_scheme = st.selectbox(
+            'Select the Modulation Scheme', ['ASK', 'PSK', 'FSK'])
+        EbN0_min = st.slider('Eb/N0 (dB) minimum', -10, 20, -10)
+        EbN0_max = st.slider('Eb/N0 (dB) maximum', -10, 20, 10)
+        M = st.slider('Number of Symbols (M)', 2, 16, 4)
+        input_bit = st.text_input('Enter the input bit', '0')
+        K = st.slider('Ricean K-factor', 1, 20)
+
+        # Calculate the BER for the selected modulation scheme and channel type
+        if modulation_scheme == 'ASK':
+            ber_func = rician_ask_ber
+        elif modulation_scheme == 'PSK':
+            ber_func = rician_psk_ber
+        elif modulation_scheme == 'FSK':
+            ber_func = rician_fsk_ber
+
+        EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+        ber = ber_func(EbN0_dB, M, K)
+
+        # Plot the BER vs. Eb/N0 curve
+        fig1, ax = plt.subplots()
+        ax.semilogy(EbN0_dB, ber)
+        ax.set_xlabel('Eb/N0 (dB)')
+        ax.set_ylabel('Bit Error Rate (BER)')
+        ax.set_title(
+            f'{modulation_scheme} Modulation Scheme in {channel_model_type} Channel for {M} Symbols')
+        st.pyplot(fig1)
+
+        if st.button("Plot the BER vs. Eb/N0 curves for all three modulation schemes"):
+            EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+            ask_ber_func = rician_ask_ber
+            psk_ber_func = rician_psk_ber
+            fsk_ber_func = rician_fsk_ber
+            ask_ber = ask_ber_func(EbN0_dB, M, K)
+            psk_ber = psk_ber_func(EbN0_dB, M, K)
+            fsk_ber = fsk_ber_func(EbN0_dB, M, K)
+
+            # Plot the BER vs. Eb/N0 curves for all three modulation schemes
+            fig2, ax2 = plt.subplots()
+            ax2.semilogy(EbN0_dB, ask_ber, label='ASK')
+            ax2.semilogy(EbN0_dB, psk_ber, label='PSK')
+            ax2.semilogy(EbN0_dB, fsk_ber, label='FSK')
+
+            ax2.set_xlabel('Eb/N0 (dB)')
+            ax2.set_ylabel('Bit Error Rate (BER)')
+            ax2.set_title(
+                f'ASK, PSK, and FSK Modulation Schemes in {channel_model_type} Channel for {M} Symbols')
+            ax2.legend()
+            st.pyplot(fig2)
+
+        st.subheader("QAM")
+
+        def rician_qam_ber(EbN0_dB, M, K):
+            # BER calculation for QAM modulation in Rician fading channel
+            EbN0 = 10**(EbN0_dB/10)  # Convert dB to linear scale
+            k = np.log2(M)  # Number of bits per symbol
+            return (1 - (1 - 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*EbN0*k/(2*(M-1)))))*np.exp(-K))/(1+K)
+
+        # Define the Streamlit app
+        modulation_scheme = st.selectbox(
+            'Select the Modulation Scheme', ['4-QAM', '8-QAM', '16-QAM', '64-QAM', '128-QAM', '256-QAM'])
+        EbN0_min = st.slider('Eb/N0 (dB) minimum', -10, 20, -10, key='forR')
+        EbN0_max = st.slider('Eb/N0 (dB) maximum', -10, 20, 10, key='forr')
+        K = st.slider('Rician K-factor', 0.0, 10.0, 1.0)
+        M = int(modulation_scheme.split('-')[0])
+        input_bit = st.text_input('Enter the input bit', '0', key='r')
+        # Calculate the BER for the selected modulation scheme and channel type
+        ber_func = rician_qam_ber
+        EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+        ber = ber_func(EbN0_dB, M, K)
+
+        # Plot the BER vs. Eb/N0 curve
+        fig1, ax = plt.subplots()
+        ax.semilogy(EbN0_dB, ber)
+        ax.set_xlabel('Eb/N0 (dB)')
+        ax.set_ylabel('Bit Error Rate (BER)')
+        ax.set_title(
+            f'{modulation_scheme} Modulation Scheme in Rician Fading Channel')
+        st.pyplot(fig1)
+
+        if st.button("Plot the BER vs. Eb/N0 curves for all QAM modulation schemes"):
+            EbN0_dB = np.arange(EbN0_min, EbN0_max+1, 1)
+            qam4_ber_func = rician_qam_ber
+            qam8_ber_func = rician_qam_ber
+            qam16_ber_func = rician_qam_ber
+            qam64_ber_func = rician_qam_ber
+            qam128_ber_func = rician_qam_ber
+            qam256_ber_func = rician_qam_ber
+            qam4_ber = qam4_ber_func(EbN0_dB, 4, K)
+            qam8_ber = qam8_ber_func(EbN0_dB, 8, K)
+            qam16_ber = qam16_ber_func(EbN0_dB, 16, K)
+            qam64_ber = qam64_ber_func(EbN0_dB, 64, K)
+            qam128_ber = qam128_ber_func(EbN0_dB, 128, K)
+            qam256_ber = qam256_ber_func(EbN0_dB, 256, K)
+            # Plot the BER vs. Eb/N0 curves for all QAM modulation schemes
+            fig2, ax2 = plt.subplots()
+            ax2.semilogy(EbN0_dB, qam4_ber, label='4-QAM')
+            ax2.semilogy(EbN0_dB, qam8_ber, label='8-QAM')
+            ax2.semilogy(EbN0_dB, qam16_ber, label='16-QAM')
+            ax2.semilogy(EbN0_dB, qam64_ber, label='64-QAM')
+            ax2.semilogy(EbN0_dB, qam128_ber, label='128-QAM')
+            ax2.semilogy(EbN0_dB, qam256_ber, label='256-QAM')
+            ax2.set_xlabel('Eb/N0 (dB)')
+            ax2.set_ylabel('Bit Error Rate (BER)')
+            ax2.set_title(f'QAM Modulation Schemes in Rician Fading Channel')
+            ax2.legend()
+            st.pyplot(fig2)
